@@ -1,0 +1,19 @@
+The Business
+Manvi Enterprises is a digital e-commerce storefront and dealership platform specializing in automotive and power backup solutions. It serves as a one-stop shop for customers looking to purchase high-quality batteries, inverters, and automotive lubricants.
+
+What is Sold on the Website?
+The platform primarily sells three categories of products:
+
+Automotive & Tubular Batteries: Top brands like Amaron, Powerzone, and Exide.
+Inverters & Home UPS Systems: Reliable power backup solutions from brands like Luminous and Microtek.
+Engine Oils & Lubricants: Premium automotive maintenance fluids from Castrol, Shell Helix, and MasterLine.
+Key Features for Customers
+Seamless Browsing: Customers can effortlessly browse products, view detailed specifications, check stock availability, and read customer reviews.
+Modern Shopping Experience: A premium shopping cart, wishlist system, and easy-to-use checkout process.
+Password-less Security: A modern OTP (One-Time Password) login system so customers don't have to remember passwords to buy items or track their orders.
+Contact & Location: Easy access to the company’s physical address, contact details, and an interactive map to locate the store.
+Key Features for the Business (Admin)
+Dedicated Admin Portal: A secure, separate dashboard exclusively for the store owners/employees.
+Management Tools: Although hidden from regular customers, the admin side is designed to handle order tracking, manage inventory, and view sales analytics to keep the business running smoothly.
+In short, it is a premium, modern e-commerce platform designed to bring Manvi Enterprises' physical dealership into the digital world, making it extremely easy for customers to buy power backup and automotive products online.
+

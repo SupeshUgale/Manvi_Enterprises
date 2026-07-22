@@ -1,0 +1,321 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,400;0,14..32,500;0,14..32,600;1,14..32,400&family=Montserrat:wght@600;700&family=Poppins:wght@600;700;800&display=swap');
+@import "tailwindcss";
+@import "tw-animate-css";
+
+/* ── Brand Design Tokens ──────────────────────────────────────────────────── */
+@theme inline {
+  --font-heading: 'Poppins', sans-serif;
+  --font-sans: 'Inter', sans-serif;
+  --font-stats: 'Montserrat', sans-serif;
+
+  /* Brand Palette */
+  --color-primary: #2F5D50;
+  --color-secondary: #8FAE9D;
+  --color-accent: #D4A64A;
+  --color-background: #FAFAF8;
+  --color-alt-bg: #F2F4F3;
+  --color-card-bg: #FFFFFF;
+  --color-heading: #1F2937;
+  --color-body: #4B5563;
+  --color-border-color: #E5E7EB;
+  --color-hover-green: #244A40;
+}
+
+/* ── CSS Custom Properties ────────────────────────────────────────────────── */
+:root {
+  --primary: #2F5D50;
+  --secondary: #8FAE9D;
+  --accent: #D4A64A;
+  --background: #FAFAF8;
+  --foreground: #1F2937;
+  --card: #FFFFFF;
+  --card-foreground: #4B5563;
+  --muted: #F2F4F3;
+  --muted-foreground: #6B7280;
+  --border: #E5E7EB;
+  --input: #E5E7EB;
+  --ring: #2F5D50;
+  --radius: 1rem;
+}
+
+/* ── Dark Mode Variables ──────────────────────────────────────────────────── */
+.dark {
+  --background: #111827;
+  --foreground: #F9FAFB;
+  --card: #1F2937;
+  --card-foreground: #D1D5DB;
+  --muted: #374151;
+  --muted-foreground: #9CA3AF;
+  --border: #374151;
+  --input: #374151;
+}
+
+/* ── Base Styles ──────────────────────────────────────────────────────────── */
+@layer base {
+
+  html,
+  body {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    background-color: #FAFAF8;
+    color: #4B5563;
+    font-family: 'Inter', sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    scroll-behavior: smooth;
+  }
+
+  /* Dark mode body */
+  html.dark body {
+    background-color: #111827;
+    color: #D1D5DB;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-family: 'Poppins', sans-serif;
+    color: #1F2937;
+  }
+
+  html.dark h1,
+  html.dark h2,
+  html.dark h3,
+  html.dark h4,
+  html.dark h5,
+  html.dark h6 {
+    color: #F9FAFB;
+  }
+
+  * {
+    border-color: #E5E7EB;
+    box-sizing: border-box;
+  }
+
+  html.dark * {
+    border-color: #374151;
+  }
+}
+
+/* ── Typography Utilities ─────────────────────────────────────────────────── */
+.logo-font {
+  font-family: 'Poppins', sans-serif;
+  font-weight: 800;
+}
+
+.stats-font {
+  font-family: 'Montserrat', sans-serif;
+  font-weight: 600;
+}
+
+/* ── Marquee Animation (Trusted Brands) ───────────────────────────────────── */
+@keyframes marquee {
+  0% {
+    transform: translateX(0);
+  }
+
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.animate-marquee {
+  animation: marquee 35s linear infinite;
+  will-change: transform;
+}
+
+.animate-marquee:hover {
+  animation-play-state: paused;
+}
+
+/* ── Cart Fly Animation ────────────────────────────────────────────────────── */
+@keyframes productFly {
+  0% {
+    opacity: 1;
+    transform: translate(var(--start-x), var(--start-y)) scale(1);
+  }
+
+  40% {
+    opacity: 0.9;
+    transform: translate(calc(var(--start-x) + 120px), calc(var(--start-y) - 100px)) scale(1.1);
+  }
+
+  100% {
+    opacity: 0.1;
+    transform: translate(calc(100vw - 70px), calc(100vh - 70px)) scale(0.15);
+  }
+}
+
+@keyframes trolleyScoot {
+
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+
+  25% {
+    transform: translateX(-12px) rotate(-4deg);
+  }
+
+  50% {
+    transform: translateX(8px) rotate(4deg);
+  }
+
+  75% {
+    transform: translateX(-4px);
+  }
+}
+
+.animate-product-fly {
+  animation: productFly 0.8s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 9999;
+  pointer-events: none;
+}
+
+.animate-trolley-scoot {
+  animation: trolleyScoot 0.6s ease-in-out;
+}
+
+/* ── Glassmorphism Utility ────────────────────────────────────────────────── */
+.glass {
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.glass-dark {
+  background: rgba(0, 0, 0, 0.15);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* ── Scrollbar Styling ────────────────────────────────────────────────────── */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Custom thin scrollbar for dashboards */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #E5E7EB;
+  border-radius: 100px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #8FAE9D;
+}
+
+html.dark ::-webkit-scrollbar-thumb {
+  background: #374151;
+}
+
+html.dark ::-webkit-scrollbar-thumb:hover {
+  background: #4B5563;
+}
+
+/* ── Loading Skeleton Pulse ───────────────────────────────────────────────── */
+@keyframes skeleton-pulse {
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.4;
+  }
+}
+
+.skeleton {
+  animation: skeleton-pulse 1.5s ease-in-out infinite;
+  background: #F2F4F3;
+  border-radius: 8px;
+}
+
+html.dark .skeleton {
+  background: #374151;
+}
+
+/* ── Toast Notification Entry ─────────────────────────────────────────────── */
+@keyframes slideInRight {
+  from {
+    transform: translateX(110%);
+    opacity: 0;
+  }
+
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideOutRight {
+  from {
+    transform: translateX(0);
+    opacity: 1;
+  }
+
+  to {
+    transform: translateX(110%);
+    opacity: 0;
+  }
+}
+
+.toast-enter {
+  animation: slideInRight 0.35s ease forwards;
+}
+
+.toast-exit {
+  animation: slideOutRight 0.3s ease forwards;
+}
+
+/* ── Selection color ──────────────────────────────────────────────────────── */
+::selection {
+  background-color: #2F5D50;
+  color: #ffffff;
+}
+
+/* ── Focus Styles ─────────────────────────────────────────────────────────── */
+:focus-visible {
+  outline: 2px solid #2F5D50;
+  outline-offset: 2px;
+}
+
+/* ── Smooth page transitions ──────────────────────────────────────────────── */
+.page-fade {
+  animation: fadeIn 0.3s ease-out forwards;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
