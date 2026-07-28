@@ -590,29 +590,6 @@ export default function UserDashboard() {
     ...BASE_TABS,
   ];
 
-  const handleToggleRole = () => {
-    const nextRole = isUserAdmin ? "user" : "admin";
-    const updated = {
-      ...user,
-      role: nextRole,
-      name: nextRole === "admin" ? "Admin User" : (user?.name || "Demo Customer"),
-    };
-    localStorage.setItem("user", JSON.stringify(updated));
-    setUser(updated);
-    if (nextRole === "admin") {
-      setActiveTab("admin-products");
-    } else {
-      setActiveTab("overview");
-    }
-    Swal.fire({
-      icon: "info",
-      title: `Switched to ${nextRole === "admin" ? "Admin" : "Customer"} Mode`,
-      text: `You are now browsing as ${nextRole === "admin" ? "Admin (full product & category management)" : "Customer"}`,
-      timer: 1500,
-      showConfirmButton: false,
-    });
-  };
-
   const renderAdminProducts = () => <AdminProductManager initialEditId={editFromUrl} />;
 
   const tabContent = {
@@ -640,7 +617,7 @@ export default function UserDashboard() {
               <p className="text-sm font-bold text-[#1F2937] dark:text-white truncate">{user.name}</p>
               <p className="text-[10px] text-[#8FAE9D] truncate">{user.email}</p>
 
-              <div className="mt-2 pt-2 border-t border-[#E5E7EB] dark:border-gray-700 space-y-1.5">
+              <div className="mt-2 pt-2 border-t border-[#E5E7EB] dark:border-gray-700">
                 <span className={`inline-block text-[9px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider ${
                   isUserAdmin
                     ? "bg-[#D4A64A] text-[#1F2937]"
@@ -648,15 +625,6 @@ export default function UserDashboard() {
                 }`}>
                   {user.role || "Customer"}
                 </span>
-
-                <button
-                  onClick={handleToggleRole}
-                  className="w-full text-[10px] font-bold py-1 px-2 rounded-lg border border-[#2F5D50]/30 text-[#2F5D50] dark:text-[#8FAE9D] hover:bg-[#2F5D50] hover:text-white transition cursor-pointer flex items-center justify-center gap-1"
-                  title="Toggle between Admin and Customer modes to test both perspectives"
-                >
-                  <Crown className="w-3 h-3 text-[#D4A64A]" />
-                  Switch to {isUserAdmin ? "Customer" : "Admin"}
-                </button>
               </div>
             </div>
 

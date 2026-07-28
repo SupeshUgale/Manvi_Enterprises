@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 import initialProducts from "../data/Product";
+import { productsService } from "../api/products";
 
 const ProductContext = createContext();
 
@@ -31,89 +32,101 @@ const INITIAL_CATEGORIES = [
 ];
 
 export const ProductProvider = ({ children }) => {
-  const [products, setProducts] = useState(() => {
-    try {
-      const saved = localStorage.getItem("manvi_products");
-      if (saved) return JSON.parse(saved);
-    } catch (e) {
-      console.error("Error reading saved products:", e);
-    }
-    return initialProducts;
-  });
+  const [products, setProducts] = useState(initialProducts);
+  const [categories, setCategories] = useState(INITIAL_CATEGORIES);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  const [categories, setCategories] = useState(() => {
-    try {
-      const saved = localStorage.getItem("manvi_categories");
-      if (saved) return JSON.parse(saved);
-    } catch (e) {
-      console.error("Error reading saved categories:", e);
-    }
-    return INITIAL_CATEGORIES;
-  });
-
-  // Sync products to localStorage
+  // Fetch products and categories from backend API on mount
   useEffect(() => {
-    try {
-      localStorage.setItem("manvi_products", JSON.stringify(products));
-    } catch (e) {
-      console.error("Error saving products:", e);
-    }
-  }, [products]);
+    let isMounted = true;
+    const fetchCatalog = async () => {
+      try {
+        setLoading(true);
+        const [fetchedProducts, fetchedCategories] = await Promise.allSettled([
+          productsService.getProducts(),
+          productsService.getCategories(),
+        ]);
 
-  // Sync categories to localStorage
-  useEffect(() => {
-    try {
-      localStorage.setItem("manvi_categories", JSON.stringify(categories));
-    } catch (e) {
-      console.error("Error saving categories:", e);
-    }
-  }, [categories]);
-
-  // Add Product
-  const addProduct = (newProductData) => {
-    const newId = products.length > 0 ? Math.max(...products.map((p) => Number(p.id) || 0)) + 1 : 1;
-    const formattedProduct = {
-      id: newId,
-      name: newProductData.name || "New Product",
-      category: newProductData.category || "General",
-      subCategory: newProductData.subCategory || "General",
-      brand: newProductData.brand || "Manvi",
-      model: newProductData.model || `MOD-${newId}`,
-      capacity: newProductData.capacity || "N/A",
-      warranty: newProductData.warranty || "12 Months",
-      technology: newProductData.technology || "Standard",
-      rating: Number(newProductData.rating) || 4.5,
-      reviews: Number(newProductData.reviews) || 1,
-      price: Number(newProductData.price) || 0,
-      originalPrice: Number(newProductData.originalPrice) || Number(newProductData.price) || 0,
-      discount: newProductData.discount ? Number(newProductData.discount) : 0,
-      badge: newProductData.badge || "New",
-      stock: Number(newProductData.stock) || 10,
-      sku: newProductData.sku || `MANVI-PRD-${newId}`,
-      description: newProductData.description || "",
-      features: Array.isArray(newProductData.features)
-        ? newProductData.features
-        : (newProductData.features || "").split(",").map((f) => f.trim()).filter(Boolean),
-      specifications: newProductData.specifications || {
-        warranty: newProductData.warranty || "12 Months",
-        brand: newProductData.brand || "Manvi",
-      },
-      image: newProductData.image || "https://images.unsplash.com/photo-1619642751034-765dfdf7c58e?auto=format&fit=crop&w=400&q=80",
-      images: [
-        newProductData.image || "https://images.unsplash.com/photo-1619642751034-765dfdf7c58e?auto=format&fit=crop&w=400&q=80"
-      ],
-      createdAt: new Date().toISOString(),
+        if (isMounted) {
+          if (fetchedProducts.status === "fulfilled" && Array.isArray(fetchedProducts.value)) {
+            setProducts(fetchedProducts.value);
+          }
+          if (fetchedCategories.status === "fulfilled" && Array.isArray(fetchedCategories.value)) {
+            setCategories(fetchedCategories.value);
+          }
+        }
+      } catch (err) {
+        console.warn("Backend products endpoint offline or unreachable. Using default catalogue:", err);
+        if (isMounted) setError(err);
+      } finally {
+        if (isMounted) setLoading(false);
+      }
     };
 
-    setProducts((prev) => [formattedProduct, ...prev]);
-    return formattedProduct;
+    fetchCatalog();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  // Add Product via API
+  const addProduct = async (newProductData) => {
+    try {
+      const response = await productsService.addProduct(newProductData);
+      const added = response.product || response;
+      setProducts((prev) => [added, ...prev]);
+      return added;
+    } catch (err) {
+      console.warn("Backend addProduct call failed, performing optimistic local update:", err);
+      const newId = products.length > 0 ? Math.max(...products.map((p) => Number(p.id) || 0)) + 1 : 1;
+      const formattedProduct = {
+        id: newId,
+        name: newProductData.name || "New Product",
+        category: newProductData.category || "General",
+        subCategory: newProductData.subCategory || "General",
+        brand: newProductData.brand || "Manvi",
+        model: newProductData.model || `MOD-${newId}`,
+        capacity: newProductData.capacity || "N/A",
+        warranty: newProductData.warranty || "12 Months",
+        technology: newProductData.technology || "Standard",
+        rating: Number(newProductData.rating) || 4.5,
+        reviews: Number(newProductData.reviews) || 1,
+        price: Number(newProductData.price) || 0,
+        originalPrice: Number(newProductData.originalPrice) || Number(newProductData.price) || 0,
+        discount: newProductData.discount ? Number(newProductData.discount) : 0,
+        badge: newProductData.badge || "New",
+        stock: Number(newProductData.stock) || 10,
+        sku: newProductData.sku || `MANVI-PRD-${newId}`,
+        description: newProductData.description || "",
+        features: Array.isArray(newProductData.features)
+          ? newProductData.features
+          : (newProductData.features || "").split(",").map((f) => f.trim()).filter(Boolean),
+        specifications: newProductData.specifications || {
+          warranty: newProductData.warranty || "12 Months",
+          brand: newProductData.brand || "Manvi",
+        },
+        image: newProductData.image || "https://images.unsplash.com/photo-1619642751034-765dfdf7c58e?auto=format&fit=crop&w=400&q=80",
+        images: [
+          newProductData.image || "https://images.unsplash.com/photo-1619642751034-765dfdf7c58e?auto=format&fit=crop&w=400&q=80"
+        ],
+        createdAt: new Date().toISOString(),
+      };
+      setProducts((prev) => [formattedProduct, ...prev]);
+      return formattedProduct;
+    }
   };
 
-  // Update Product
-  const updateProduct = (id, updatedData) => {
+  // Update Product via API
+  const updateProduct = async (id, updatedData) => {
+    try {
+      await productsService.updateProduct(id, updatedData);
+    } catch (err) {
+      console.warn("Backend updateProduct failed, applying local update:", err);
+    }
     setProducts((prev) =>
       prev.map((p) => {
-        if (p.id === Number(id)) {
+        if (p.id === Number(id) || p.id === id) {
           return {
             ...p,
             ...updatedData,
@@ -121,9 +134,6 @@ export const ProductProvider = ({ children }) => {
             originalPrice: updatedData.originalPrice !== undefined ? Number(updatedData.originalPrice) : p.originalPrice,
             stock: updatedData.stock !== undefined ? Number(updatedData.stock) : p.stock,
             rating: updatedData.rating !== undefined ? Number(updatedData.rating) : p.rating,
-            features: typeof updatedData.features === "string"
-              ? updatedData.features.split(",").map((f) => f.trim()).filter(Boolean)
-              : updatedData.features || p.features,
           };
         }
         return p;
@@ -131,55 +141,63 @@ export const ProductProvider = ({ children }) => {
     );
   };
 
-  // Delete Product
-  const deleteProduct = (id) => {
-    setProducts((prev) => prev.filter((p) => p.id !== Number(id)));
-  };
-
-  // Add Category
-  const addCategory = (categoryData) => {
-    const slug = categoryData.slug || categoryData.name.replace(/\s+/g, " ");
-    const exists = categories.some((c) => c.slug.toLowerCase() === slug.toLowerCase());
-    if (exists) {
-      throw new Error(`Category "${categoryData.name}" already exists!`);
+  // Delete Product via API
+  const deleteProduct = async (id) => {
+    try {
+      await productsService.deleteProduct(id);
+    } catch (err) {
+      console.warn("Backend deleteProduct failed, applying local delete:", err);
     }
-
-    const newCategory = {
-      name: categoryData.name,
-      slug: slug,
-      count: categoryData.count || "0 Products",
-      desc: categoryData.desc || "High-performance energy and product division.",
-      icon: categoryData.icon || "Layers",
-      image: categoryData.image || "https://images.unsplash.com/photo-1619642751034-765dfdf7c58e?auto=format&fit=crop&w=400&q=80",
-    };
-
-    setCategories((prev) => [...prev, newCategory]);
-    return newCategory;
+    setProducts((prev) => prev.filter((p) => p.id !== Number(id) && p.id !== id));
   };
 
-  // Update Category
-  const updateCategory = (slug, updatedData) => {
+  // Add Category via API
+  const addCategory = async (categoryData) => {
+    try {
+      const response = await productsService.addCategory(categoryData);
+      const added = response.category || response;
+      setCategories((prev) => [...prev, added]);
+      return added;
+    } catch (err) {
+      const slug = categoryData.slug || categoryData.name.replace(/\s+/g, "-").toLowerCase();
+      const newCategory = {
+        name: categoryData.name,
+        slug: slug,
+        count: categoryData.count || "0 Products",
+        desc: categoryData.desc || "High-performance energy and product division.",
+        icon: categoryData.icon || "Layers",
+        image: categoryData.image || "https://images.unsplash.com/photo-1619642751034-765dfdf7c58e?auto=format&fit=crop&w=400&q=80",
+      };
+      setCategories((prev) => [...prev, newCategory]);
+      return newCategory;
+    }
+  };
+
+  // Update Category via API
+  const updateCategory = async (slug, updatedData) => {
+    try {
+      await productsService.updateCategory(slug, updatedData);
+    } catch (err) {
+      console.warn("Backend updateCategory failed:", err);
+    }
     setCategories((prev) =>
-      prev.map((cat) => {
-        if (cat.slug === slug) {
-          return { ...cat, ...updatedData };
-        }
-        return cat;
-      })
+      prev.map((cat) => (cat.slug === slug ? { ...cat, ...updatedData } : cat))
     );
   };
 
-  // Delete Category
-  const deleteCategory = (slug) => {
+  // Delete Category via API
+  const deleteCategory = async (slug) => {
+    try {
+      await productsService.deleteCategory(slug);
+    } catch (err) {
+      console.warn("Backend deleteCategory failed:", err);
+    }
     setCategories((prev) => prev.filter((c) => c.slug !== slug));
   };
 
-  // Reset to default inventory
   const resetToDefaults = () => {
     setProducts(initialProducts);
     setCategories(INITIAL_CATEGORIES);
-    localStorage.removeItem("manvi_products");
-    localStorage.removeItem("manvi_categories");
   };
 
   return (
@@ -187,6 +205,8 @@ export const ProductProvider = ({ children }) => {
       value={{
         products,
         categories,
+        loading,
+        error,
         addProduct,
         updateProduct,
         deleteProduct,

@@ -7,26 +7,28 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // Initialize auth state from localStorage
+  // Initialize auth state by verifying token with backend
   useEffect(() => {
     const initAuth = async () => {
       try {
         const token = localStorage.getItem("token");
-        const savedUser = localStorage.getItem("user");
 
-        if (token && savedUser) {
-          // If we had a real backend, we might verify the token here via authService.getCurrentUser(token)
-          // For now, we trust the local storage if both exist
-          setUser(JSON.parse(savedUser));
+        if (token) {
+          // Verify session token against backend /auth/me
+          const response = await authService.getCurrentUser();
+          const userData = response.user || response;
+          setUser(userData);
+          localStorage.setItem("user", JSON.stringify(userData));
         } else {
-          // Clean up if partial data exists
           localStorage.removeItem("token");
           localStorage.removeItem("user");
+          setUser(null);
         }
       } catch (error) {
-        console.error("Auth initialization failed:", error);
+        console.error("Session verification failed:", error);
         localStorage.removeItem("token");
         localStorage.removeItem("user");
+        setUser(null);
       } finally {
         setLoading(false);
       }
@@ -35,22 +37,42 @@ export const AuthProvider = ({ children }) => {
     initAuth();
   }, []);
 
-  const login = async (email, otp) => {
-    const response = await authService.verifyOtp(email, otp);
-    if (response.success && response.token && response.user) {
+  /**
+   * Standard Email & Password Login
+   */
+  const login = async (email, password) => {
+    const response = await authService.login(email, password);
+    if (response && response.token) {
       localStorage.setItem("token", response.token);
       localStorage.setItem("user", JSON.stringify(response.user));
       setUser(response.user);
       return response.user;
     }
-    throw new Error("Invalid response from server");
+    throw new Error(response.message || "Invalid login response from server");
   };
 
+  /**
+   * OTP Verification Login
+   */
+  const loginWithOtp = async (email, otp) => {
+    const response = await authService.verifyOtp(email, otp);
+    if (response && response.token) {
+      localStorage.setItem("token", response.token);
+      localStorage.setItem("user", JSON.stringify(response.user));
+      setUser(response.user);
+      return response.user;
+    }
+    throw new Error(response.message || "Invalid OTP response from server");
+  };
+
+  /**
+   * User Logout
+   */
   const logout = async () => {
     try {
       await authService.logout();
     } catch (error) {
-      console.error("Logout error:", error);
+      console.warn("Backend logout notification warning:", error);
     } finally {
       localStorage.removeItem("token");
       localStorage.removeItem("user");
@@ -58,12 +80,14 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // Intercepting unauthenticated actions
+  /**
+   * Intercept unauthenticated user actions
+   */
   const requireAuth = (callback, redirectCallback) => {
     if (user) {
       callback();
     } else {
-      if (typeof redirectCallback === 'function') {
+      if (typeof redirectCallback === "function") {
         redirectCallback();
       }
     }
@@ -73,9 +97,10 @@ export const AuthProvider = ({ children }) => {
     user,
     loading,
     login,
+    loginWithOtp,
     logout,
     requireAuth,
-    setUser // Exposing setUser for legacy compatibility temporarily if needed
+    setUser,
   };
 
   return (

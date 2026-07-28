@@ -12,7 +12,7 @@ export const enterpriseInfo = {
     shortAddress: "Manvi Enterprises,Near Mankar Apartment,Malkapur Road,Nandura – 443404",
     phonePrimary: "+91 99229 97298",
     phoneSecondary: "+91 82085 17318",
-    email: "manvienterprises@gmail.com",
+    email: "manvienterprises.official@gmail.com",
     supportEmail: "dnyaneshwarshrisagr21@gmail.com",
   },
   businessHours: {

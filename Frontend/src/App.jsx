@@ -22,6 +22,9 @@ import Wishlist from "./pages/Wishlist";
 import NotFound from "./pages/NotFound";
 import VerifyOTP from "./pages/VerifyOTP";
 
+// Import your Admin Dashboard component
+import AdminDashboard from "./pages/AdminDashboard";
+
 import { useCart } from "./context/CartContext";
 import { useAuth } from "./context/AuthContext";
 
@@ -45,10 +48,19 @@ const App = () => {
         <Route path="/services" element={<Services />} />
         <Route path="/contact" element={<Contact />} />
 
-        {/* Auth Routes — redirect logged-in users away */}
+        {/* Auth Routes — redirect logged-in users away based on role */}
         <Route
           path="/login"
-          element={user ? <Navigate to="/" replace /> : <Login />}
+          element={
+            user ? (
+              <Navigate
+                to={user.role === "admin" ? "/admin/dashboard" : "/"}
+                replace
+              />
+            ) : (
+              <Login />
+            )
+          }
         />
         <Route
           path="/register"
@@ -64,9 +76,7 @@ const App = () => {
         <Route
           path="/dashboard"
           element={
-            user
-              ? <UserDashboard />
-              : <Navigate to="/login" replace />
+            user ? <UserDashboard /> : <Navigate to="/login" replace />
           }
         />
         <Route path="/wishlist" element={<Wishlist />} />
@@ -74,7 +84,17 @@ const App = () => {
         <Route path="/checkout" element={<Checkout />} />
         <Route path="/order-success" element={<OrderSuccess />} />
 
-
+        {/* Admin Routes */}
+        <Route
+          path="/admin/dashboard"
+          element={
+            user && user.role === "admin" ? (
+              <AdminDashboard />
+            ) : (
+              <Navigate to="/login" replace />
+            )
+          }
+        />
 
         {/* 404 Catch-All */}
         <Route path="*" element={<NotFound />} />

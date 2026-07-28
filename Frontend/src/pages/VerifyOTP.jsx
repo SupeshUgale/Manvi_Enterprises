@@ -9,7 +9,7 @@ import { authService } from "../api/auth";
 export default function VerifyOTP() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { login } = useAuth();
+  const { loginWithOtp } = useAuth();
   
   const email = location.state?.email;
   const redirect = location.state?.redirect || "/";
@@ -98,11 +98,11 @@ export default function VerifyOTP() {
 
     setIsVerifying(true);
     try {
-      const user = await login(email, otpValue);
+      const user = await loginWithOtp(email, otpValue);
       setIsSuccess(true);
       setTimeout(() => {
-        if (user.role === "admin") {
-          window.location.href = "http://localhost:5175/";
+        if (user?.role === "admin") {
+          navigate("/admin/dashboard", { replace: true });
         } else {
           navigate(redirect === "/" ? "/dashboard" : redirect, { replace: true });
         }
