@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import api from '../api/axios';
+import SecureLoader from '../Components/SecureLoader';
 import {
   LayoutDashboard, Package, ShoppingBag, Users, LogOut,
   TrendingUp, IndianRupee, AlertCircle, CheckCircle2,
@@ -120,6 +121,10 @@ export default function AdminDashboard() {
     (c.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
     (c.email || '').toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  if (loading) {
+    return <SecureLoader message="Loading Admin Analytics & Database..." />;
+  }
 
   // ─── Overview Tab ─────────────────────────────────────────────────────────
   const renderOverview = () => (

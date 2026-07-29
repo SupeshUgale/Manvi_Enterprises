@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useLocation, Link } from "react-router-dom";
 import ProductCard from "../Components/ProductCard";
+import SecureLoader from "../Components/SecureLoader";
 import { useCart } from "../context/CartContext";
 import { useProduct } from "../context/ProductContext";
 import { ShoppingCart, Filter, BatteryCharging, Zap, Droplet, LayoutGrid, Search, Star, Layers } from "lucide-react";
@@ -13,7 +14,7 @@ const ICON_MAP = {
 };
 
 const Products = () => {
-  const { products, categories } = useProduct();
+  const { products, categories, loading } = useProduct();
   const { cartItems, addToCart } = useCart();
   const location = useLocation();
 
@@ -259,7 +260,9 @@ const Products = () => {
 
         {/* Product Grid */}
         <div>
-          {filteredProducts.length > 0 ? (
+          {loading ? (
+            <SecureLoader fullScreen={false} message="Loading Products from MongoDB..." />
+          ) : filteredProducts.length > 0 ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 justify-items-center">
               {filteredProducts.map((product) => (
                 <div key={product.id}>

@@ -4,6 +4,7 @@ import { useWishlist } from "../context/WishlistContext";
 import { useCart } from "../context/CartContext";
 import { useAuth } from "../context/AuthContext";
 import AdminProductManager from "../Components/AdminProductManager";
+import SecureLoader from "../Components/SecureLoader";
 import api from "../api/axios";
 import {
   User, ShoppingBag, Heart, Settings, LogOut, MapPin, Mail,

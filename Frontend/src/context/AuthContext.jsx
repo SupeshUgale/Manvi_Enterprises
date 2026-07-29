@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { authService } from "../api/auth";
+import SecureLoader from "../Components/SecureLoader";
 
 const AuthContext = createContext();
 
@@ -105,7 +106,7 @@ export const AuthProvider = ({ children }) => {
 
   return (
     <AuthContext.Provider value={value}>
-      {!loading && children}
+      {loading ? <SecureLoader message="Verifying Encrypted Session..." /> : children}
     </AuthContext.Provider>
   );
 };
