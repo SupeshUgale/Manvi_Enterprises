@@ -1,20 +1,21 @@
-import amaronBike from '../assets/product/amaron_bike.png';
-import amaronB1 from '../assets/product/amrogon_b1.png';
-import castrolGTX from '../assets/product/CastrolGTX.png';
-import castrolMagnatec from '../assets/product/CastrolMagnatec.png';
-import dreams2Eoil from '../assets/product/Dreams2_Eoil.png';
-import dreams3Eoil from '../assets/product/Dreams3_Eoil.png';
-import dreams4Eoil from '../assets/product/Dreams4_Eoil.png';
-import dreamsEoil from '../assets/product/DreamsEoil.png';
-import exideGQP850 from '../assets/product/ExideGQP850.png';
-import exideGQP1050 from '../assets/product/ExideGQP1050.png';
-import luminousEcoVoltNeo1050 from '../assets/product/LuminousEcoVoltNeo1050.png';
-import luminousZelio1100 from '../assets/product/luminousZelio1100.png';
-import masterLine1L from '../assets/product/MasterLine_1L.jpg';
-import masterLineMP3Eoil from '../assets/product/MasterLineMP_3Eoil.png';
-import powerzoneB1 from '../assets/product/Powerzone_b1.png';
-import powerzoneBike from '../assets/product/powerzone_bick.png';
-import shellHelixUltra from '../assets/product/ShellHelixUltra.png';
+// Product images served from /public/product/ (no import needed — deployed as static assets)
+const amaronBike = '/product/amaron_bike.png';
+const amaronB1 = '/product/amrogon_b1.png';
+const castrolGTX = '/product/CastrolGTX.png';
+const castrolMagnatec = '/product/CastrolMagnatec.png';
+const dreams2Eoil = '/product/Dreams2_Eoil.png';
+const dreams3Eoil = '/product/Dreams3_Eoil.png';
+const dreams4Eoil = '/product/Dreams4_Eoil.png';
+const dreamsEoil = '/product/DreamsEoil.png';
+const exideGQP850 = '/product/ExideGQP850.png';
+const exideGQP1050 = '/product/ExideGQP1050.png';
+const luminousEcoVoltNeo1050 = '/product/LuminousEcoVoltNeo1050.png';
+const luminousZelio1100 = '/product/luminousZelio1100.png';
+const masterLine1L = '/product/MasterLine_1L.jpg';
+const masterLineMP3Eoil = '/product/MasterLineMP_3Eoil.png';
+const powerzoneB1 = '/product/Powerzone_b1.png';
+const powerzoneBike = '/product/powerzone_bick.png';
+const shellHelixUltra = '/product/ShellHelixUltra.png';
 
 
 let products = [
@@ -465,7 +466,7 @@ let products = [
     badge: 'Smart Tech',
     stock: 55,
     sku: 'MANVI-INV-LUMZELIO',
-    description: 'Indias most intelligent home UPS featuring a digital display that shows backup and charging time remaining in hours & minutes.',
+    description: "India's most intelligent home UPS featuring a digital display that shows backup and charging time remaining in hours & minutes.",
     features: [
       'Intelligent LED display dashboard',
       'Advanced 32-bit processor control',
@@ -645,7 +646,7 @@ let products = [
     image: shellHelixUltra,
     images: [shellHelixUltra]
   },
-  
+
 ];
 
 export default products;
