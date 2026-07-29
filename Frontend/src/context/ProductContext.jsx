@@ -32,199 +32,113 @@ const INITIAL_CATEGORIES = [
 ];
 
 export const ProductProvider = ({ children }) => {
-  const [products, setProducts] = useState(initialProducts);
-  const [categories, setCategories] = useState(INITIAL_CATEGORIES);
+  const [products, setProducts] = useState([]);
+  const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  const fetchCatalog = async () => {
+    try {
+      setLoading(true);
+      const [fetchedProducts, fetchedCategories] = await Promise.allSettled([
+        productsService.getProducts({ limit: 200 }),
+        productsService.getCategories(),
+      ]);
+
+      if (fetchedProducts.status === 'fulfilled') {
+        const raw = fetchedProducts.value;
+        const list = Array.isArray(raw.products)
+          ? raw.products
+          : Array.isArray(raw.data)
+          ? raw.data
+          : Array.isArray(raw)
+          ? raw
+          : [];
+        const normalized = list.map(p => ({ ...p, id: p._id || p.id }));
+        setProducts(normalized);
+      }
+      if (fetchedCategories.status === 'fulfilled') {
+        const raw = fetchedCategories.value;
+        const list = Array.isArray(raw.categories)
+          ? raw.categories
+          : Array.isArray(raw.data)
+          ? raw.data
+          : Array.isArray(raw)
+          ? raw
+          : [];
+        setCategories(list);
+      }
+    } catch (err) {
+      console.error('Error fetching catalogue from MongoDB:', err);
+      setError(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Fetch products and categories from backend API on mount
   useEffect(() => {
-    let isMounted = true;
-    const fetchCatalog = async () => {
-      try {
-        setLoading(true);
-        const [fetchedProducts, fetchedCategories] = await Promise.allSettled([
-          productsService.getProducts({ limit: 200 }),
-          productsService.getCategories(),
-        ]);
-
-        if (isMounted) {
-          if (fetchedProducts.status === 'fulfilled') {
-            const raw = fetchedProducts.value;
-            const list = Array.isArray(raw.products)
-              ? raw.products
-              : Array.isArray(raw.data)
-              ? raw.data
-              : Array.isArray(raw)
-              ? raw
-              : null;
-            if (list && list.length > 0) {
-              // Normalize _id → id for frontend consistency
-              const normalized = list.map(p => ({ ...p, id: p._id || p.id }));
-              setProducts(normalized);
-            }
-          }
-          if (fetchedCategories.status === 'fulfilled') {
-            const raw = fetchedCategories.value;
-            const list = Array.isArray(raw.categories)
-              ? raw.categories
-              : Array.isArray(raw.data)
-              ? raw.data
-              : Array.isArray(raw)
-              ? raw
-              : null;
-            if (list && list.length > 0) {
-              setCategories(list);
-            }
-          }
-        }
-      } catch (err) {
-        console.warn('Backend products endpoint offline. Using default catalogue:', err);
-        if (isMounted) setError(err);
-      } finally {
-        if (isMounted) setLoading(false);
-      }
-    };
-
     fetchCatalog();
-    return () => { isMounted = false; };
   }, []);
 
-  // Add Product via API
+  // Add Product via API (MongoDB)
   const addProduct = async (newProductData) => {
-    try {
-      const response = await productsService.addProduct(newProductData);
-      const added = response.product || response;
-      setProducts((prev) => [added, ...prev]);
-      return added;
-    } catch (err) {
-      console.warn("Backend addProduct call failed, performing optimistic local update:", err);
-      const newId = products.length > 0 ? Math.max(...products.map((p) => Number(p.id) || 0)) + 1 : 1;
-      const formattedProduct = {
-        id: newId,
-        name: newProductData.name || "New Product",
-        category: newProductData.category || "General",
-        subCategory: newProductData.subCategory || "General",
-        brand: newProductData.brand || "Manvi",
-        model: newProductData.model || `MOD-${newId}`,
-        capacity: newProductData.capacity || "N/A",
-        warranty: newProductData.warranty || "12 Months",
-        technology: newProductData.technology || "Standard",
-        rating: Number(newProductData.rating) || 4.5,
-        reviews: Number(newProductData.reviews) || 1,
-        price: Number(newProductData.price) || 0,
-        originalPrice: Number(newProductData.originalPrice) || Number(newProductData.price) || 0,
-        discount: newProductData.discount ? Number(newProductData.discount) : 0,
-        badge: newProductData.badge || "New",
-        stock: Number(newProductData.stock) || 10,
-        sku: newProductData.sku || `MANVI-PRD-${newId}`,
-        description: newProductData.description || "",
-        features: Array.isArray(newProductData.features)
-          ? newProductData.features
-          : (newProductData.features || "").split(",").map((f) => f.trim()).filter(Boolean),
-        specifications: newProductData.specifications || {
-          warranty: newProductData.warranty || "12 Months",
-          brand: newProductData.brand || "Manvi",
-        },
-        image: newProductData.image || "https://images.unsplash.com/photo-1619642751034-765dfdf7c58e?auto=format&fit=crop&w=400&q=80",
-        images: [
-          newProductData.image || "https://images.unsplash.com/photo-1619642751034-765dfdf7c58e?auto=format&fit=crop&w=400&q=80"
-        ],
-        createdAt: new Date().toISOString(),
-      };
-      setProducts((prev) => [formattedProduct, ...prev]);
-      return formattedProduct;
-    }
+    const response = await productsService.addProduct(newProductData);
+    const added = response.product || response.data || response;
+    const normalized = { ...added, id: added._id || added.id };
+    setProducts((prev) => [normalized, ...prev]);
+    await fetchCatalog();
+    return normalized;
   };
 
-  // Update Product via API
+  // Update Product via API (MongoDB)
   const updateProduct = async (id, updatedData) => {
-    try {
-      const res = await productsService.updateProduct(id, updatedData);
-      const updated = res.product || res.data || updatedData;
-      setProducts((prev) =>
-        prev.map((p) =>
-          (p._id === id || p.id === id || p.id === Number(id))
-            ? { ...p, ...updated, id: p._id || p.id }
-            : p
-        )
-      );
-    } catch (err) {
-      console.warn('Backend updateProduct failed, applying local update:', err);
-      setProducts((prev) =>
-        prev.map((p) => {
-          if (p._id === id || p.id === id || p.id === Number(id)) {
-            return {
-              ...p,
-              ...updatedData,
-              price: updatedData.price !== undefined ? Number(updatedData.price) : p.price,
-              actualPrice: updatedData.actualPrice !== undefined ? Number(updatedData.actualPrice) : p.actualPrice,
-              stock: updatedData.stock !== undefined ? Number(updatedData.stock) : p.stock,
-            };
-          }
-          return p;
-        })
-      );
-    }
+    const res = await productsService.updateProduct(id, updatedData);
+    const updated = res.product || res.data || updatedData;
+    setProducts((prev) =>
+      prev.map((p) =>
+        (p._id === id || p.id === id || p.id === Number(id))
+          ? { ...p, ...updated, id: p._id || p.id }
+          : p
+      )
+    );
+    await fetchCatalog();
   };
 
-  // Delete Product via API
+  // Delete Product via API (MongoDB)
   const deleteProduct = async (id) => {
-    try {
-      await productsService.deleteProduct(id);
-    } catch (err) {
-      console.warn('Backend deleteProduct failed, applying local delete:', err);
-    }
+    await productsService.deleteProduct(id);
     setProducts((prev) => prev.filter((p) => p._id !== id && p.id !== id && p.id !== Number(id)));
+    await fetchCatalog();
   };
 
-  // Add Category via API
+  // Add Category via API (MongoDB)
   const addCategory = async (categoryData) => {
-    try {
-      const response = await productsService.addCategory(categoryData);
-      const added = response.category || response;
-      setCategories((prev) => [...prev, added]);
-      return added;
-    } catch (err) {
-      const slug = categoryData.slug || categoryData.name.replace(/\s+/g, "-").toLowerCase();
-      const newCategory = {
-        name: categoryData.name,
-        slug: slug,
-        count: categoryData.count || "0 Products",
-        desc: categoryData.desc || "High-performance energy and product division.",
-        icon: categoryData.icon || "Layers",
-        image: categoryData.image || "https://images.unsplash.com/photo-1619642751034-765dfdf7c58e?auto=format&fit=crop&w=400&q=80",
-      };
-      setCategories((prev) => [...prev, newCategory]);
-      return newCategory;
-    }
+    const response = await productsService.addCategory(categoryData);
+    const added = response.category || response.data || response;
+    setCategories((prev) => [...prev, added]);
+    await fetchCatalog();
+    return added;
   };
 
-  // Update Category via API
+  // Update Category via API (MongoDB)
   const updateCategory = async (slug, updatedData) => {
-    try {
-      await productsService.updateCategory(slug, updatedData);
-    } catch (err) {
-      console.warn("Backend updateCategory failed:", err);
-    }
+    await productsService.updateCategory(slug, updatedData);
     setCategories((prev) =>
       prev.map((cat) => (cat.slug === slug ? { ...cat, ...updatedData } : cat))
     );
+    await fetchCatalog();
   };
 
-  // Delete Category via API
+  // Delete Category via API (MongoDB)
   const deleteCategory = async (slug) => {
-    try {
-      await productsService.deleteCategory(slug);
-    } catch (err) {
-      console.warn("Backend deleteCategory failed:", err);
-    }
+    await productsService.deleteCategory(slug);
     setCategories((prev) => prev.filter((c) => c.slug !== slug));
+    await fetchCatalog();
   };
 
   const resetToDefaults = () => {
-    setProducts(initialProducts);
-    setCategories(INITIAL_CATEGORIES);
+    fetchCatalog();
   };
 
   return (

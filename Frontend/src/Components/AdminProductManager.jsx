@@ -102,7 +102,7 @@ export default function AdminProductManager({ initialEditId = null }) {
   };
 
   // Save Product (Create or Update)
-  const handleSaveProduct = (e) => {
+  const handleSaveProduct = async (e) => {
     e.preventDefault();
     if (!productForm.name || !productForm.price) {
       Swal.fire("Error", "Product Name and Price are required!", "error");
@@ -135,26 +135,30 @@ export default function AdminProductManager({ initialEditId = null }) {
       image: productForm.image || "https://images.unsplash.com/photo-1619642751034-765dfdf7c58e?auto=format&fit=crop&w=400&q=80",
     };
 
-    if (editingProduct) {
-      updateProduct(editingProduct.id, payload);
-      Swal.fire({
-        icon: "success",
-        title: "Product Updated!",
-        text: `"${productForm.name}" was updated successfully.`,
-        timer: 1500,
-        showConfirmButton: false,
-        confirmButtonColor: "#2F5D50",
-      });
-    } else {
-      addProduct(payload);
-      Swal.fire({
-        icon: "success",
-        title: "Product Added!",
-        text: `"${productForm.name}" has been added to inventory.`,
-        timer: 1500,
-        showConfirmButton: false,
-        confirmButtonColor: "#2F5D50",
-      });
+    try {
+      if (editingProduct) {
+        await updateProduct(editingProduct._id || editingProduct.id, payload);
+        Swal.fire({
+          icon: "success",
+          title: "Product Updated!",
+          text: `"${productForm.name}" was updated in MongoDB successfully.`,
+          timer: 1500,
+          showConfirmButton: false,
+          confirmButtonColor: "#2F5D50",
+        });
+      } else {
+        await addProduct(payload);
+        Swal.fire({
+          icon: "success",
+          title: "Product Added!",
+          text: `"${productForm.name}" has been added to MongoDB database.`,
+          timer: 1500,
+          showConfirmButton: false,
+          confirmButtonColor: "#2F5D50",
+        });
+      }
+    } catch (err) {
+      Swal.fire("Error", err.response?.data?.message || err.message || "Operation failed", "error");
     }
 
     setIsProductModalOpen(false);
@@ -166,7 +170,7 @@ export default function AdminProductManager({ initialEditId = null }) {
   const handleDeleteProduct = (id, name) => {
     Swal.fire({
       title: `Delete "${name}"?`,
-      text: "This action will remove the product from the catalog.",
+      text: "This action will remove the product from MongoDB database.",
       icon: "warning",
       showCancelButton: true,
       confirmButtonColor: "#e11d48",
@@ -174,22 +178,26 @@ export default function AdminProductManager({ initialEditId = null }) {
       confirmButtonText: "Yes, Delete Product",
       cancelButtonText: "Cancel",
       customClass: { popup: "rounded-2xl border shadow-xl" },
-    }).then((res) => {
+    }).then(async (res) => {
       if (res.isConfirmed) {
-        deleteProduct(id);
-        Swal.fire({
-          icon: "success",
-          title: "Deleted!",
-          text: "Product removed.",
-          timer: 1200,
-          showConfirmButton: false,
-        });
+        try {
+          await deleteProduct(id);
+          Swal.fire({
+            icon: "success",
+            title: "Deleted!",
+            text: "Product removed from MongoDB.",
+            timer: 1200,
+            showConfirmButton: false,
+          });
+        } catch (err) {
+          Swal.fire("Error", err.response?.data?.message || err.message, "error");
+        }
       }
     });
   };
 
   // Create Category handler
-  const handleSaveCategory = (e) => {
+  const handleSaveCategory = async (e) => {
     e.preventDefault();
     if (!categoryForm.name) {
       Swal.fire("Error", "Category Name is required!", "error");
@@ -197,9 +205,9 @@ export default function AdminProductManager({ initialEditId = null }) {
     }
 
     try {
-      addCategory({
+      await addCategory({
         name: categoryForm.name,
-        slug: categoryForm.slug || categoryForm.name.replace(/\s+/g, " "),
+        slug: categoryForm.slug || categoryForm.name.replace(/\s+/g, "-").toLowerCase(),
         desc: categoryForm.desc || "Product division",
         icon: categoryForm.icon,
         image: categoryForm.image,
@@ -208,7 +216,7 @@ export default function AdminProductManager({ initialEditId = null }) {
       Swal.fire({
         icon: "success",
         title: "Category Created!",
-        text: `Category "${categoryForm.name}" added successfully.`,
+        text: `Category "${categoryForm.name}" added to MongoDB.`,
         timer: 1500,
         showConfirmButton: false,
         confirmButtonColor: "#2F5D50",
@@ -217,7 +225,7 @@ export default function AdminProductManager({ initialEditId = null }) {
       setIsCategoryModalOpen(false);
       setCategoryForm(emptyCategoryForm);
     } catch (err) {
-      Swal.fire("Error", err.message, "error");
+      Swal.fire("Error", err.response?.data?.message || err.message, "error");
     }
   };
 
@@ -225,16 +233,20 @@ export default function AdminProductManager({ initialEditId = null }) {
   const handleDeleteCategory = (slug, name) => {
     Swal.fire({
       title: `Delete Category "${name}"?`,
-      text: "Removing this category will affect category filtering.",
+      text: "Removing this category will affect MongoDB category filtering.",
       icon: "warning",
       showCancelButton: true,
       confirmButtonColor: "#e11d48",
       cancelButtonColor: "#8FAE9D",
       confirmButtonText: "Yes, Delete",
-    }).then((res) => {
+    }).then(async (res) => {
       if (res.isConfirmed) {
-        deleteCategory(slug);
-        Swal.fire("Deleted", `Category ${name} was deleted.`, "success");
+        try {
+          await deleteCategory(slug);
+          Swal.fire("Deleted", `Category "${name}" was deleted from MongoDB.`, "success");
+        } catch (err) {
+          Swal.fire("Error", err.response?.data?.message || err.message, "error");
+        }
       }
     });
   };

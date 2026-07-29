@@ -11,6 +11,7 @@ dotenv.config({ path: path.join(__dirname, ".env") });
 
 const Product = require("./models/Product");
 const Category = require("./models/Category");
+const User = require("./models/User");
 const generateSlug = require("./helpers/slugGenerator");
 
 // 1. Copy assets from Frontend to Backend public uploads directory
@@ -463,10 +464,23 @@ const seedData = async () => {
     await mongoose.connect(process.env.MONGO_URI);
     console.log("✅ Database Connected.");
 
-    // Clear existing products and categories
+    // Clear existing products, categories, and users
     await Product.deleteMany();
     await Category.deleteMany();
-    console.log("🗑️ Cleared existing products and categories from MongoDB.");
+    await User.deleteMany();
+    console.log("🗑️ Cleared existing products, categories, and users from MongoDB.");
+
+    // Create 1 Admin User
+    const adminUser = await User.create({
+      name: "Admin User",
+      email: "admin@manvienterprises.com",
+      password: "Admin@123456",
+      phone: "+91 98765 43210",
+      mobile: "+91 98765 43210",
+      address: "Shop No 12, Commercial Complex, Sector 4, Main Road, New Delhi, India",
+      role: "admin",
+    });
+    console.log(`👤 Created Single Admin User: ${adminUser.email}`);
 
     // Unique Categories list
     const categoryNames = [
