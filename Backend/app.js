@@ -19,10 +19,18 @@ const errorHandler = require("./middleware/errorHandler");
 
 const app = express();
 
-// Trust proxy
+
+// ================================
+// TRUST PROXY (Render)
+// ================================
+
 app.set("trust proxy", 1);
 
-// Body parser
+
+// ================================
+// BODY PARSER
+// ================================
+
 app.use(
   express.json({
     limit: "10mb",
@@ -36,66 +44,184 @@ app.use(
   })
 );
 
-// CORS
+
+// ================================
+// CORS CONFIGURATION
+// ================================
+
+const allowedOrigins = [
+  "http://localhost:5173",
+  "https://manvienterprises.netlify.app",
+];
+
+
 app.use(
   cors({
-    origin: process.env.CLIENT_URL || "http://localhost:5173",
+    origin: function (origin, callback) {
+
+      // Allow Postman, mobile apps, server requests
+      if (!origin) {
+        return callback(null, true);
+      }
+
+
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+
+
+      return callback(
+        new Error("CORS Error: Origin not allowed")
+      );
+    },
+
     credentials: true,
+
+    methods: [
+      "GET",
+      "POST",
+      "PUT",
+      "PATCH",
+      "DELETE",
+      "OPTIONS",
+    ],
+
+    allowedHeaders: [
+      "Content-Type",
+      "Authorization",
+    ],
   })
 );
 
-// Security
+
+// ================================
+// SECURITY
+// ================================
+
 app.use(
   helmet({
     crossOriginResourcePolicy: false,
   })
 );
 
+
 app.use(cookieParser());
 
-// Logger
+
+// ================================
+// LOGGER
+// ================================
+
 if (process.env.NODE_ENV === "development") {
   app.use(morgan("dev"));
 }
 
-// Static Images
+
+// ================================
+// STATIC FILES
+// ================================
+
 app.use(
   "/uploads",
-  express.static(path.join(__dirname, "public/uploads"))
+  express.static(
+    path.join(__dirname, "public/uploads")
+  )
 );
 
-// Test API
+
+// ================================
+// TEST API
+// ================================
+
 app.get("/", (req, res) => {
+
   res.status(200).json({
+
     success: true,
-    message: "🚀 Welcome to Manvi Enterprises API",
+
+    message:
+      "🚀 Welcome to Manvi Enterprises API",
+
     version: "1.0.0",
+
   });
+
 });
+
 
 // ================================
 // API ROUTES
 // ================================
 
-app.use("/api/auth", authRoutes);
-app.use("/api/users", userRoutes);
-app.use("/api/products", productRoutes);
-app.use("/api/categories", categoryRoutes);
-app.use("/api/orders", orderRoutes);
-app.use("/api/cart", cartRoutes);
-app.use("/api/reviews", reviewRoutes);
-app.use("/api/admin", adminRoutes);
-app.use("/api/contact", contactRoutes);
+app.use(
+  "/api/auth",
+  authRoutes
+);
 
-// 404 Handler
+app.use(
+  "/api/users",
+  userRoutes
+);
+
+app.use(
+  "/api/products",
+  productRoutes
+);
+
+app.use(
+  "/api/categories",
+  categoryRoutes
+);
+
+app.use(
+  "/api/orders",
+  orderRoutes
+);
+
+app.use(
+  "/api/cart",
+  cartRoutes
+);
+
+app.use(
+  "/api/reviews",
+  reviewRoutes
+);
+
+app.use(
+  "/api/admin",
+  adminRoutes
+);
+
+app.use(
+  "/api/contact",
+  contactRoutes
+);
+
+
+// ================================
+// 404 HANDLER
+// ================================
+
 app.use((req, res) => {
+
   res.status(404).json({
+
     success: false,
-    message: `Route '${req.originalUrl}' not found.`,
+
+    message:
+      `Route '${req.originalUrl}' not found.`,
+
   });
+
 });
 
-// Error Handler
+
+// ================================
+// ERROR HANDLER
+// ================================
+
 app.use(errorHandler);
+
 
 module.exports = app;
