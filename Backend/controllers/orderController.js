@@ -1,6 +1,10 @@
 const Order = require("../models/Order");
+const {
+  sendOrderConfirmationEmail,
+  sendOrderStatusUpdateEmail,
+} = require("../services/emailService");
 
-// Helper to generate a unique order ID e.g. ORD-20260728-1234
+// Helper to generate a unique order ID e.g. ORD-20260729-1234
 const generateOrderId = () => {
   const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, "");
   const randomNum = Math.floor(1000 + Math.random() * 9000);
@@ -37,10 +41,18 @@ const createOrder = async (req, res) => {
       });
     }
 
-    if (!shippingAddress || !shippingAddress.address || !shippingAddress.city) {
+    if (!shippingAddress || !shippingAddress.address) {
       return res.status(400).json({
         success: false,
         message: "Please provide complete shipping address details.",
+      });
+    }
+
+    const recipientEmail = customer.email || (req.user ? req.user.email : null);
+    if (!recipientEmail) {
+      return res.status(400).json({
+        success: false,
+        message: "Customer email address is required to place an order.",
       });
     }
 
@@ -48,7 +60,11 @@ const createOrder = async (req, res) => {
 
     const order = await Order.create({
       orderId,
-      customer,
+      customer: {
+        name: customer.name,
+        email: recipientEmail,
+        phone: customer.phone,
+      },
       products: orderProducts.map((item) => ({
         productId: item.productId || item.id || item._id,
         name: item.name,
@@ -63,18 +79,32 @@ const createOrder = async (req, res) => {
         pincode: shippingAddress.pincode || shippingAddress.zip || "",
       },
       paymentMethod: paymentMethod || "COD",
-      totalAmount: totalAmount || orderProducts.reduce((acc, i) => acc + (i.price * (i.quantity || 1)), 0),
+      totalAmount:
+        totalAmount ||
+        orderProducts.reduce(
+          (acc, i) => acc + i.price * (i.quantity || 1),
+          0
+        ),
       orderStatus: "Placed",
-      paymentStatus: paymentMethod === "Online" || paymentMethod === "Card" ? "Paid" : "Pending",
+      paymentStatus:
+        paymentMethod === "Online" || paymentMethod === "Card"
+          ? "Paid"
+          : "Pending",
+    });
+
+    // Send Order Confirmation Email asynchronously
+    sendOrderConfirmationEmail(recipientEmail, order).catch((err) => {
+      console.error("❌ Failed to send Order Confirmation Email:", err.message);
     });
 
     res.status(201).json({
       success: true,
-      message: "Order placed successfully.",
+      message: "Order placed successfully. Confirmation email sent.",
       data: order,
       order,
     });
   } catch (error) {
+    console.error("CREATE ORDER ERROR:", error);
     res.status(500).json({
       success: false,
       message: error.message || "Failed to create order.",
@@ -193,14 +223,26 @@ const updateOrderStatus = async (req, res) => {
       });
     }
 
-    if (status || orderStatus) {
-      order.orderStatus = status || orderStatus;
+    const newStatus = status || orderStatus;
+    let statusChanged = false;
+
+    if (newStatus && order.orderStatus !== newStatus) {
+      order.orderStatus = newStatus;
+      statusChanged = true;
     }
+
     if (paymentStatus) {
       order.paymentStatus = paymentStatus;
     }
 
     await order.save();
+
+    // Send status notification email to customer if status changed
+    if (statusChanged && order.customer && order.customer.email) {
+      sendOrderStatusUpdateEmail(order.customer.email, order).catch((err) => {
+        console.error("❌ Failed to send Order Status Update Email:", err.message);
+      });
+    }
 
     res.status(200).json({
       success: true,

@@ -1,4 +1,5 @@
 const User = require("../models/User");
+const bcrypt = require("bcryptjs");
 
 // @desc    Register new user (Admin or legacy endpoint)
 // @route   POST /api/users
@@ -65,6 +66,77 @@ const getAllUsers = async (req, res) => {
   }
 };
 
+// @desc    Get Current Logged-in User Profile
+// @route   GET /api/users/profile
+// @access  Private
+const getUserProfile = async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id).select("-password");
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found.",
+      });
+    }
+    res.status(200).json({
+      success: true,
+      data: user,
+      user,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message || "Failed to fetch profile.",
+    });
+  }
+};
+
+// @desc    Update Current User Profile
+// @route   PUT /api/users/profile
+// @access  Private
+const updateUserProfile = async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id);
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found.",
+      });
+    }
+
+    user.name = req.body.name || user.name;
+    user.phone = req.body.phone || user.phone;
+    user.mobile = req.body.mobile || user.mobile;
+    user.address = req.body.address || user.address;
+
+    if (req.body.password) {
+      user.password = await bcrypt.hash(req.body.password, 10);
+    }
+
+    const updatedUser = await user.save();
+
+    res.status(200).json({
+      success: true,
+      message: "Profile updated successfully.",
+      data: {
+        _id: updatedUser._id,
+        name: updatedUser.name,
+        email: updatedUser.email,
+        phone: updatedUser.phone,
+        mobile: updatedUser.mobile,
+        address: updatedUser.address,
+        role: updatedUser.role,
+      },
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message || "Failed to update profile.",
+    });
+  }
+};
+
 // @desc    Get User By ID
 // @route   GET /api/users/:id
 // @access  Private
@@ -97,7 +169,7 @@ const getUserById = async (req, res) => {
 const updateUser = async (req, res) => {
   try {
     const fieldsToUpdate = { ...req.body };
-    delete fieldsToUpdate.password; // Prevent direct password overwrite here
+    delete fieldsToUpdate.password;
 
     const user = await User.findByIdAndUpdate(req.params.id, fieldsToUpdate, {
       new: true,
@@ -153,6 +225,8 @@ const deleteUser = async (req, res) => {
 module.exports = {
   registerUser,
   getAllUsers,
+  getUserProfile,
+  updateUserProfile,
   getUserById,
   updateUser,
   deleteUser,

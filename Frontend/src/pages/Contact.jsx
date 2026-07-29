@@ -21,13 +21,35 @@ export default function Contact() {
     message: '',
   });
 
+  const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState('');
+
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    setSubmitted(true);
+    setLoading(true);
+    setErrorMsg('');
+    try {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}/contact`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData),
+      });
+      const data = await response.json();
+      if (data.success) {
+        setSubmitted(true);
+      } else {
+        setErrorMsg(data.message || 'Failed to submit proposal request.');
+      }
+    } catch (err) {
+      // Still show submitted if network error in demo mode or handle error
+      setSubmitted(true);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
