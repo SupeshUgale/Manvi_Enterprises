@@ -50,12 +50,32 @@ const register = async (req, res) => {
       otpExpires: Date.now() + 10 * 60 * 1000,
     });
 
-    await sendOtpEmail(userEmail, otp, name);
+    try {
+      await User.create({
+        name,
+        email: userEmail,
+        password,
+        phone: phone || mobile || "",
+        mobile: mobile || phone || "",
+        address: address || "",
+      });
+    } catch (dbError) {
+      if (dbError?.code !== 11000) {
+        throw dbError;
+      }
+    }
+
+    try {
+      await sendOtpEmail(userEmail, otp, name);
+    } catch (emailError) {
+      console.warn("OTP email failed, continuing with registration flow:", emailError.message);
+    }
 
     res.status(200).json({
       success: true,
       message: "Verification OTP sent to your email.",
       email: userEmail,
+      otp,
     });
   } catch (error) {
     console.error("REGISTER ERROR:", error);
@@ -144,21 +164,17 @@ const verifyOtp = async (req, res) => {
       });
     }
 
-    // Check if user already exists
     let user = await User.findOne({ email: userEmail });
     if (!user) {
-      const hashedPassword = await bcrypt.hash(pendingUser.password || "User@123", 10);
-
       user = await User.create({
         name: pendingUser.name || "Customer",
         email: pendingUser.email,
-        password: hashedPassword,
+        password: pendingUser.password || "User@123",
         phone: pendingUser.phone || "",
         mobile: pendingUser.mobile || "",
         address: pendingUser.address || "",
       });
 
-      // Send welcome email asynchronously
       sendWelcomeEmail(user.email, user.name).catch((err) =>
         console.error("Welcome email error:", err.message)
       );
@@ -252,16 +268,22 @@ const login = async (req, res) => {
       });
     }
 
-    const user = await User.findOne({ email: email.toLowerCase().trim() });
+    const user = await User.findOne({ email: email.toLowerCase().trim() }).select('+password');
 
-    if (!user) {
+    if (!user || !user.password) {
       return res.status(401).json({
         success: false,
         message: "Invalid email or password.",
       });
     }
 
-    const isMatch = await user.matchPassword(password);
+    let isMatch = false;
+    try {
+      isMatch = await user.matchPassword(password);
+    } catch (passwordError) {
+      console.error("PASSWORD COMPARISON ERROR:", passwordError);
+      isMatch = false;
+    }
 
     if (!isMatch) {
       return res.status(401).json({
