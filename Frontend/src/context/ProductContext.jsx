@@ -44,20 +44,42 @@ export const ProductProvider = ({ children }) => {
       try {
         setLoading(true);
         const [fetchedProducts, fetchedCategories] = await Promise.allSettled([
-          productsService.getProducts(),
+          productsService.getProducts({ limit: 200 }),
           productsService.getCategories(),
         ]);
 
         if (isMounted) {
-          if (fetchedProducts.status === "fulfilled" && Array.isArray(fetchedProducts.value)) {
-            setProducts(fetchedProducts.value);
+          if (fetchedProducts.status === 'fulfilled') {
+            const raw = fetchedProducts.value;
+            const list = Array.isArray(raw.products)
+              ? raw.products
+              : Array.isArray(raw.data)
+              ? raw.data
+              : Array.isArray(raw)
+              ? raw
+              : null;
+            if (list && list.length > 0) {
+              // Normalize _id → id for frontend consistency
+              const normalized = list.map(p => ({ ...p, id: p._id || p.id }));
+              setProducts(normalized);
+            }
           }
-          if (fetchedCategories.status === "fulfilled" && Array.isArray(fetchedCategories.value)) {
-            setCategories(fetchedCategories.value);
+          if (fetchedCategories.status === 'fulfilled') {
+            const raw = fetchedCategories.value;
+            const list = Array.isArray(raw.categories)
+              ? raw.categories
+              : Array.isArray(raw.data)
+              ? raw.data
+              : Array.isArray(raw)
+              ? raw
+              : null;
+            if (list && list.length > 0) {
+              setCategories(list);
+            }
           }
         }
       } catch (err) {
-        console.warn("Backend products endpoint offline or unreachable. Using default catalogue:", err);
+        console.warn('Backend products endpoint offline. Using default catalogue:', err);
         if (isMounted) setError(err);
       } finally {
         if (isMounted) setLoading(false);
@@ -65,9 +87,7 @@ export const ProductProvider = ({ children }) => {
     };
 
     fetchCatalog();
-    return () => {
-      isMounted = false;
-    };
+    return () => { isMounted = false; };
   }, []);
 
   // Add Product via API
@@ -120,25 +140,32 @@ export const ProductProvider = ({ children }) => {
   // Update Product via API
   const updateProduct = async (id, updatedData) => {
     try {
-      await productsService.updateProduct(id, updatedData);
+      const res = await productsService.updateProduct(id, updatedData);
+      const updated = res.product || res.data || updatedData;
+      setProducts((prev) =>
+        prev.map((p) =>
+          (p._id === id || p.id === id || p.id === Number(id))
+            ? { ...p, ...updated, id: p._id || p.id }
+            : p
+        )
+      );
     } catch (err) {
-      console.warn("Backend updateProduct failed, applying local update:", err);
+      console.warn('Backend updateProduct failed, applying local update:', err);
+      setProducts((prev) =>
+        prev.map((p) => {
+          if (p._id === id || p.id === id || p.id === Number(id)) {
+            return {
+              ...p,
+              ...updatedData,
+              price: updatedData.price !== undefined ? Number(updatedData.price) : p.price,
+              actualPrice: updatedData.actualPrice !== undefined ? Number(updatedData.actualPrice) : p.actualPrice,
+              stock: updatedData.stock !== undefined ? Number(updatedData.stock) : p.stock,
+            };
+          }
+          return p;
+        })
+      );
     }
-    setProducts((prev) =>
-      prev.map((p) => {
-        if (p.id === Number(id) || p.id === id) {
-          return {
-            ...p,
-            ...updatedData,
-            price: updatedData.price !== undefined ? Number(updatedData.price) : p.price,
-            originalPrice: updatedData.originalPrice !== undefined ? Number(updatedData.originalPrice) : p.originalPrice,
-            stock: updatedData.stock !== undefined ? Number(updatedData.stock) : p.stock,
-            rating: updatedData.rating !== undefined ? Number(updatedData.rating) : p.rating,
-          };
-        }
-        return p;
-      })
-    );
   };
 
   // Delete Product via API
@@ -146,9 +173,9 @@ export const ProductProvider = ({ children }) => {
     try {
       await productsService.deleteProduct(id);
     } catch (err) {
-      console.warn("Backend deleteProduct failed, applying local delete:", err);
+      console.warn('Backend deleteProduct failed, applying local delete:', err);
     }
-    setProducts((prev) => prev.filter((p) => p.id !== Number(id) && p.id !== id));
+    setProducts((prev) => prev.filter((p) => p._id !== id && p.id !== id && p.id !== Number(id)));
   };
 
   // Add Category via API

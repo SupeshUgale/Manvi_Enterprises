@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { useLocation, useNavigate, Link } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
+import { useAuth } from '../context/AuthContext';
+import api from '../api/axios';
 import {
   Building2,
   CreditCard,
@@ -11,13 +13,15 @@ import {
   Package,
   Landmark,
   QrCode,
-  ShieldCheck
+  ShieldCheck,
+  Loader2
 } from 'lucide-react';
 
 export default function Checkout() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { cartItems: contextCartItems, subtotal: contextSubtotal, gst: contextGst, grandTotal: contextGrandTotal, delivery: contextDelivery } = useCart();
+  const { user } = useAuth();
+  const { cartItems: contextCartItems, subtotal: contextSubtotal, gst: contextGst, grandTotal: contextGrandTotal, delivery: contextDelivery, clearCart } = useCart();
 
   const state = location.state || {};
   const cartItems = state.cartItems || contextCartItems;
@@ -29,6 +33,8 @@ export default function Checkout() {
   const [paymentMethod, setPaymentMethod] = useState('card');
   const [selectedBank, setSelectedBank] = useState('SBI');
   const [upiId, setUpiId] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState('');
 
   const [cardData, setCardData] = useState({
     cardNumber: '',
@@ -57,10 +63,12 @@ export default function Checkout() {
     setCardData({ ...cardData, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    
-    let paymentLabel = 'Online Card Payment';
+    setIsSubmitting(true);
+    setSubmitError('');
+
+    let paymentLabel = 'COD';
     if (paymentMethod === 'netbanking') {
       paymentLabel = `Net Banking (${selectedBank})`;
     } else if (paymentMethod === 'upi') {
@@ -69,25 +77,58 @@ export default function Checkout() {
       paymentLabel = `Credit/Debit Card (ending in ${cardData.cardNumber.slice(-4) || '4242'})`;
     }
 
-    navigate('/order-success', {
-      state: {
-        orderDetails: {
-          orderId: `ME-ORD-${Date.now().toString().slice(-6)}`,
-          date: new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' }),
-          ...formData,
-          paymentMethod: paymentLabel,
-          cartItems,
-          subtotal,
-          gst,
-          delivery,
-          grandTotal,
-          estimatedDelivery: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toLocaleDateString('en-IN', {
-            day: 'numeric', month: 'long', year: 'numeric',
-          }),
-        },
+    const orderPayload = {
+      customer: {
+        name: formData.contactName || formData.companyName || user?.name || 'Customer',
+        email: formData.email || user?.email || '',
+        phone: formData.phone || user?.phone || '',
       },
-      replace: true,
-    });
+      products: cartItems.map((item) => ({
+        productId: item._id || item.id || item.productId,
+        name: item.name,
+        quantity: item.quantity,
+        price: item.price,
+        image: item.image || '',
+      })),
+      shippingAddress: {
+        address: formData.address,
+        city: formData.city,
+        state: formData.state,
+        pincode: formData.pincode,
+      },
+      paymentMethod: paymentLabel,
+      totalAmount: Math.round(grandTotal),
+    };
+
+    try {
+      const response = await api.post('/orders', orderPayload);
+      const savedOrder = response.data?.order || response.data?.data || {};
+      clearCart();
+      navigate('/order-success', {
+        state: {
+          orderDetails: {
+            orderId: savedOrder.orderId || `ME-ORD-${Date.now().toString().slice(-6)}`,
+            date: new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' }),
+            ...formData,
+            paymentMethod: paymentLabel,
+            cartItems,
+            subtotal,
+            gst,
+            delivery,
+            grandTotal,
+            estimatedDelivery: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toLocaleDateString('en-IN', {
+              day: 'numeric', month: 'long', year: 'numeric',
+            }),
+          },
+        },
+        replace: true,
+      });
+    } catch (err) {
+      console.error('Order placement failed:', err);
+      const errMsg = err?.response?.data?.message || 'Failed to place order. Please check your details and try again.';
+      setSubmitError(errMsg);
+      setIsSubmitting(false);
+    }
   };
 
   if (cartItems.length === 0) {
@@ -382,12 +423,28 @@ export default function Checkout() {
                 <span className="text-[#8E9C86]">₹{Math.round(grandTotal).toLocaleString('en-IN')}</span>
               </div>
 
+              {submitError && (
+                <div className="bg-red-50 border border-red-200 text-red-700 rounded-xl px-4 py-2.5 text-xs font-medium">
+                  ⚠️ {submitError}
+                </div>
+              )}
+
               <button
                 type="submit"
-                className="w-full bg-[#A8B5A0] hover:bg-[#8E9C86] text-white font-bold py-3.5 px-4 rounded-xl shadow-xs transition-all duration-200 flex items-center justify-center gap-2"
+                disabled={isSubmitting}
+                className="w-full bg-[#A8B5A0] hover:bg-[#8E9C86] disabled:opacity-60 disabled:cursor-not-allowed text-white font-bold py-3.5 px-4 rounded-xl shadow-xs transition-all duration-200 flex items-center justify-center gap-2"
               >
-                <CheckCircle2 className="w-4 h-4" />
-                Pay ₹{Math.round(grandTotal).toLocaleString('en-IN')} &amp; Place Order
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Placing Order...
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle2 className="w-4 h-4" />
+                    Pay ₹{Math.round(grandTotal).toLocaleString('en-IN')} &amp; Place Order
+                  </>
+                )}
               </button>
 
               <div className="text-xs text-slate-500 text-center leading-relaxed flex items-center justify-center gap-1">

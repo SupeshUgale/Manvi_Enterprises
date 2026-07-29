@@ -4,12 +4,13 @@ import { useWishlist } from "../context/WishlistContext";
 import { useCart } from "../context/CartContext";
 import { useAuth } from "../context/AuthContext";
 import AdminProductManager from "../Components/AdminProductManager";
+import api from "../api/axios";
 import {
   User, ShoppingBag, Heart, Settings, LogOut, MapPin, Mail,
   Phone, Calendar, PackageCheck, ChevronRight, Edit3, Save,
   Bell, Lock, Shield, Eye, EyeOff, CheckCircle2, Star,
   Truck, AlertCircle, XCircle, TrendingUp, Home, ArrowRight,
-  LayoutDashboard, X, Package, Layers, Crown, ShieldCheck
+  LayoutDashboard, X, Package, Layers, Crown, ShieldCheck, Loader2
 } from "lucide-react";
 import Swal from "sweetalert2";
 import { motion, AnimatePresence } from "framer-motion";
@@ -52,7 +53,8 @@ export default function UserDashboard() {
       : tabFromUrl || "overview"
   );
 
-  const [orders] = useState(DUMMY_ORDERS);
+  const [orders, setOrders] = useState([]);
+  const [loadingOrders, setLoadingOrders] = useState(false);
   const [showPw, setShowPw] = useState(false);
   const [saving, setSaving] = useState(false);
 
@@ -80,21 +82,52 @@ export default function UserDashboard() {
     if (!user) navigate("/login", { replace: true });
   }, [user, navigate]);
 
-  const handleSaveProfile = (e) => {
+  // Fetch real orders from backend on mount
+  useEffect(() => {
+    if (!user) return;
+    const fetchOrders = async () => {
+      setLoadingOrders(true);
+      try {
+        const res = await api.get('/orders/my-orders');
+        const fetched = res.data?.orders || res.data?.data || [];
+        if (fetched.length > 0) setOrders(fetched);
+      } catch (err) {
+        console.warn('Could not fetch orders from backend, using local state.');
+      } finally {
+        setLoadingOrders(false);
+      }
+    };
+    fetchOrders();
+  }, [user]);
+
+  const handleSaveProfile = async (e) => {
     e.preventDefault();
     setSaving(true);
-    setTimeout(() => {
-      const updated = { ...user, ...profileData };
+    try {
+      const res = await api.put('/users/profile', profileData);
+      const updated = res.data?.data || { ...user, ...profileData };
       localStorage.setItem("user", JSON.stringify(updated));
       setUser(updated);
-      setSaving(false);
       Swal.fire({
         icon: "success", title: "Profile Updated!",
         text: "Your profile has been saved.",
         timer: 1500, showConfirmButton: false,
         customClass: { popup: "rounded-2xl shadow-xl" },
       });
-    }, 800);
+    } catch (err) {
+      // Fallback to local update if backend fails
+      const updated = { ...user, ...profileData };
+      localStorage.setItem("user", JSON.stringify(updated));
+      setUser(updated);
+      Swal.fire({
+        icon: "success", title: "Profile Updated!",
+        text: "Changes saved locally.",
+        timer: 1500, showConfirmButton: false,
+        customClass: { popup: "rounded-2xl shadow-xl" },
+      });
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handlePasswordChange = (e) => {
@@ -251,7 +284,12 @@ export default function UserDashboard() {
         <h2 className="text-lg font-bold text-[#1F2937] dark:text-white font-heading">My Orders</h2>
         <p className="text-xs text-[#4B5563] dark:text-gray-400 mt-0.5">{orders.length} orders placed</p>
       </div>
-      {orders.length === 0 ? (
+      {loadingOrders ? (
+        <div className="bg-white dark:bg-gray-800 border border-[#E5E7EB] dark:border-gray-700 rounded-2xl p-12 flex items-center justify-center gap-3">
+          <Loader2 className="w-5 h-5 animate-spin text-[#2F5D50]" />
+          <span className="text-xs text-[#8FAE9D]">Loading your orders...</span>
+        </div>
+      ) : orders.length === 0 ? (
         <div className="bg-white dark:bg-gray-800 border border-[#E5E7EB] dark:border-gray-700 rounded-2xl p-12 text-center">
           <PackageCheck className="w-12 h-12 text-[#8FAE9D] mx-auto mb-3 stroke-1" />
           <h3 className="font-bold text-[#1F2937] dark:text-white text-sm mb-2">No orders yet</h3>
@@ -260,30 +298,40 @@ export default function UserDashboard() {
       ) : (
         <div className="space-y-4">
           {orders.map(order => {
-            const s = ORDER_STATUS[order.status] || ORDER_STATUS.Pending;
+            // Support both backend API format and legacy dummy format
+            const orderId = order.orderId || order.id;
+            const orderStatus = order.orderStatus || order.status || 'Placed';
+            const total = order.totalAmount || order.total || 0;
+            const orderDate = order.createdAt
+              ? new Date(order.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })
+              : order.date || '';
+            const productList = order.products?.map(p => p.name) || order.products || [];
+            const itemCount = order.products?.length || order.items || 0;
+
+            const s = ORDER_STATUS[orderStatus] || ORDER_STATUS.Pending;
             const SIcon = s.icon;
             return (
-              <div key={order.id} className="bg-white dark:bg-gray-800 border border-[#E5E7EB] dark:border-gray-700 hover:border-[#2F5D50] rounded-2xl overflow-hidden transition">
+              <div key={orderId} className="bg-white dark:bg-gray-800 border border-[#E5E7EB] dark:border-gray-700 hover:border-[#2F5D50] rounded-2xl overflow-hidden transition">
                 <div className="px-5 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-[#E5E7EB] dark:border-gray-700 bg-[#FAFAF8] dark:bg-gray-700/30">
                   <div>
-                    <span className="text-xs font-black text-[#2F5D50] dark:text-[#8FAE9D] font-mono">{order.id}</span>
+                    <span className="text-xs font-black text-[#2F5D50] dark:text-[#8FAE9D] font-mono">{orderId}</span>
                     <p className="text-[10px] text-[#8FAE9D] mt-0.5 flex items-center gap-1">
-                      <Calendar className="w-3 h-3" /> {order.date}
+                      <Calendar className="w-3 h-3" /> {orderDate}
                     </p>
                   </div>
                   <div className="flex items-center gap-3">
-                    <span className="text-sm font-bold text-[#1F2937] dark:text-white">₹{order.total.toLocaleString("en-IN")}</span>
+                    <span className="text-sm font-bold text-[#1F2937] dark:text-white">₹{total.toLocaleString("en-IN")}</span>
                     <span className={`flex items-center gap-1 text-[9px] font-bold px-2.5 py-1.5 rounded-full ${s.bg} ${s.text}`}>
-                      <SIcon className="w-2.5 h-2.5" /> {order.status}
+                      <SIcon className="w-2.5 h-2.5" /> {orderStatus}
                     </span>
                   </div>
                 </div>
                 <div className="px-5 py-4 space-y-2">
-                  <p className="text-[10px] font-bold text-[#8FAE9D] uppercase tracking-wider">Products Ordered ({order.items})</p>
-                  {order.products.map((p, i) => (
+                  <p className="text-[10px] font-bold text-[#8FAE9D] uppercase tracking-wider">Products Ordered ({itemCount})</p>
+                  {productList.map((p, i) => (
                     <div key={i} className="flex items-center gap-2">
                       <div className="w-1.5 h-1.5 bg-[#8FAE9D] rounded-full shrink-0" />
-                      <span className="text-xs text-[#4B5563] dark:text-gray-400">{p}</span>
+                      <span className="text-xs text-[#4B5563] dark:text-gray-400">{typeof p === 'string' ? p : p?.name}</span>
                     </div>
                   ))}
                 </div>
@@ -291,7 +339,7 @@ export default function UserDashboard() {
                   <button className="text-xs font-bold px-4 py-2 rounded-xl border border-[#E5E7EB] dark:border-gray-600 text-[#4B5563] dark:text-gray-400 hover:border-[#2F5D50] hover:text-[#2F5D50] transition cursor-pointer">
                     View Details
                   </button>
-                  {order.status === "Delivered" && (
+                  {orderStatus === "Delivered" && (
                     <button className="text-xs font-bold px-4 py-2 rounded-xl bg-[#2F5D50]/10 dark:bg-[#2F5D50]/20 text-[#2F5D50] dark:text-[#8FAE9D] hover:bg-[#2F5D50] hover:text-white transition cursor-pointer">
                       Buy Again
                     </button>
