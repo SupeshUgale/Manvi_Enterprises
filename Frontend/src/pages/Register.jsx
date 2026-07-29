@@ -103,10 +103,11 @@ export default function Register() {
         navigate("/verify-otp", { state: { email: formData.email, redirect: from } });
       });
     } catch (error) {
+      const serverMessage = error.response?.data?.message || error.message || "Could not register your account. Please try again.";
       Swal.fire({
         icon: "error",
         title: "Registration Failed",
-        text: error.message || "Could not register your account. Please try again.",
+        text: serverMessage,
         confirmButtonColor: "#2F5D50",
       });
     } finally {
@@ -151,6 +152,7 @@ export default function Register() {
               <input
                 type="text"
                 required
+                autoComplete="name"
                 value={formData.username}
                 onChange={(e) => setFormData({ ...formData, username: e.target.value })}
                 placeholder="John Doe"
@@ -167,6 +169,7 @@ export default function Register() {
               <input
                 type="email"
                 required
+                autoComplete="email"
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                 placeholder="your@email.com"
@@ -184,6 +187,7 @@ export default function Register() {
                 <input
                   type={showPassword ? "text" : "password"}
                   required
+                  autoComplete="new-password"
                   value={formData.password}
                   onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                   placeholder="Min 6 characters"
@@ -206,6 +210,7 @@ export default function Register() {
                 <input
                   type={showConfirmPassword ? "text" : "password"}
                   required
+                  autoComplete="new-password"
                   value={formData.confirmPassword}
                   onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
                   placeholder="Re-enter password"
@@ -230,6 +235,7 @@ export default function Register() {
               <input
                 type="tel"
                 required
+                autoComplete="tel"
                 value={formData.phone}
                 onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                 placeholder="+91 XXXXX XXXXX"
