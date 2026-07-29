@@ -1,75 +1,87 @@
 const mongoose = require("mongoose");
 
 const productSchema = new mongoose.Schema(
-{
-    name:{
-        type:String,
-        required:true
+  {
+    name: {
+      type: String,
+      required: true,
+      trim: true,
     },
-
-    category:{
-        type:String,
-        required:true,
-        enum:[
-            "Battery",
-            "Engine Oil",
-            "Solar Panel",
-            "Inverter",
-            "Battery Accessories"
-        ]
+    category: {
+      type: String,
+      required: true,
+      trim: true,
     },
-
-    brand:{
-        type:String,
-        required:true
+    subCategory: {
+      type: String,
+      default: "",
     },
-
-    stock:{
-        type:Number,
-        required:true,
-        default:0
+    brand: {
+      type: String,
+      required: true,
+      trim: true,
     },
-
-    capacity:{
-        type:String,
-        required:true
+    stock: {
+      type: Number,
+      required: true,
+      default: 10,
     },
-
-    warranty:{
-        type:String,
-        required:true
+    capacity: {
+      type: String,
+      required: true,
+      default: "N/A",
     },
-
-    price:{
-        type:Number,
-        required:true
+    warranty: {
+      type: String,
+      required: true,
+      default: "12 Months",
     },
-
-    actualPrice:{
-        type:Number,
-        required:true
+    price: {
+      type: Number,
+      required: true,
     },
-
-    discount:{
-        type:Number,
-        default:0
+    actualPrice: {
+      type: Number,
+      required: true,
     },
-
-    description:{
-        type:String
+    discount: {
+      type: Number,
+      default: 0,
     },
-
-    image:{
-        type:String,
-        required:true
+    badge: {
+      type: String,
+      default: "",
     },
-
-    createdAt:{
-        type:Date,
-        default:Date.now
-    }
-
-});
-
+    sku: {
+      type: String,
+      default: "",
+    },
+    description: {
+      type: String,
+      default: "",
+    },
+    features: [
+      {
+        type: String,
+      },
+    ],
+    image: {
+      type: String,
+      required: true,
+    },
+    images: [
+      {
+        type: String,
+      },
+    ],
+    createdAt: {
+      type: Date,
+      default: Date.now,
+    },
+  },
+  {
+    timestamps: true,
+  }
+);
 
 module.exports = mongoose.model("Product", productSchema);
