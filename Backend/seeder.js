@@ -34,25 +34,25 @@ if (fs.existsSync(sourceDir)) {
   console.log(`📸 Copied ${files.length} product images to Backend /public/uploads`);
 }
 
-// Map asset variables from Frontend/src/data/Product.js to static backend paths
+// Map asset variables to Frontend /public/product/ static paths (served by Netlify CDN)
 const imageMap = {
-  amaronBike: "/uploads/amaron_bike.png",
-  amaronB1: "/uploads/amrogon_b1.png",
-  castrolGTX: "/uploads/CastrolGTX.png",
-  castrolMagnatec: "/uploads/CastrolMagnatec.png",
-  dreams2Eoil: "/uploads/Dreams2_Eoil.png",
-  dreams3Eoil: "/uploads/Dreams3_Eoil.png",
-  dreams4Eoil: "/uploads/Dreams4_Eoil.png",
-  dreamsEoil: "/uploads/DreamsEoil.png",
-  exideGQP850: "/uploads/ExideGQP850.png",
-  exideGQP1050: "/uploads/ExideGQP1050.png",
-  luminousEcoVoltNeo1050: "/uploads/LuminousEcoVoltNeo1050.png",
-  luminousZelio1100: "/uploads/luminousZelio1100.png",
-  masterLine1L: "/uploads/MasterLine_1L.jpg",
-  masterLineMP3Eoil: "/uploads/MasterLineMP_3Eoil.png",
-  powerzoneB1: "/uploads/Powerzone_b1.png",
-  powerzoneBike: "/uploads/powerzone_bick.png",
-  shellHelixUltra: "/uploads/ShellHelixUltra.png",
+  amaronBike: "/product/amaron_bike.png",
+  amaronB1: "/product/amrogon_b1.png",
+  castrolGTX: "/product/CastrolGTX.png",
+  castrolMagnatec: "/product/CastrolMagnatec.png",
+  dreams2Eoil: "/product/Dreams2_Eoil.png",
+  dreams3Eoil: "/product/Dreams3_Eoil.png",
+  dreams4Eoil: "/product/Dreams4_Eoil.png",
+  dreamsEoil: "/product/DreamsEoil.png",
+  exideGQP850: "/product/ExideGQP850.png",
+  exideGQP1050: "/product/ExideGQP1050.png",
+  luminousEcoVoltNeo1050: "/product/LuminousEcoVoltNeo1050.png",
+  luminousZelio1100: "/product/luminousZelio1100.png",
+  masterLine1L: "/product/MasterLine_1L.jpg",
+  masterLineMP3Eoil: "/product/MasterLineMP_3Eoil.png",
+  powerzoneB1: "/product/Powerzone_b1.png",
+  powerzoneBike: "/product/powerzone_bick.png",
+  shellHelixUltra: "/product/ShellHelixUltra.png",
 };
 
 // Raw product data corresponding to Frontend/src/data/Product.js

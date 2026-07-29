@@ -1,4 +1,13 @@
 import React, { useState, useEffect } from "react";
+
+const BACKEND_URL = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5000';
+function resolveImageUrl(img) {
+  if (!img) return 'https://placehold.co/300x300?text=No+Image';
+  if (img.startsWith('http')) return img;
+  if (img.startsWith('/product/')) return img;
+  if (img.startsWith('/uploads/')) return `${BACKEND_URL}${img}`;
+  return img;
+}
 import { useParams, useNavigate, Link, useLocation } from "react-router-dom";
 import { useCart } from "../context/CartContext";
 import { useWishlist } from "../context/WishlistContext";
@@ -45,7 +54,7 @@ export default function ProductDetails() {
 
   useEffect(() => {
     if (product) {
-      setActiveImage(product.image);
+      setActiveImage(resolveImageUrl(product.image));
     }
   }, [product]);
 
@@ -154,12 +163,12 @@ export default function ProductDetails() {
                 {product.images.map((img, idx) => (
                   <button
                     key={idx}
-                    onClick={() => setActiveImage(img)}
+                    onClick={() => setActiveImage(resolveImageUrl(img))}
                     className={`w-16 h-16 rounded-xl border-2 p-1 bg-white transition-all flex items-center justify-center cursor-pointer ${
-                      activeImage === img ? "border-[#2F5D50] shadow-xs" : "border-[#E5E7EB] hover:border-[#8FAE9D]"
+                      activeImage === resolveImageUrl(img) ? "border-[#2F5D50] shadow-xs" : "border-[#E5E7EB] hover:border-[#8FAE9D]"
                     }`}
                   >
-                    <img src={img} alt="" className="max-h-full object-contain" />
+                    <img src={resolveImageUrl(img)} alt="" className="max-h-full object-contain" />
                   </button>
                 ))}
               </div>

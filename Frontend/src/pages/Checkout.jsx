@@ -1,4 +1,13 @@
 import React, { useState } from 'react';
+
+const BACKEND_URL = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5000';
+function resolveImageUrl(img) {
+  if (!img) return 'https://placehold.co/40x40?text=?';
+  if (img.startsWith('http')) return img;
+  if (img.startsWith('/product/')) return img;
+  if (img.startsWith('/uploads/')) return `${BACKEND_URL}${img}`;
+  return img;
+}
 import { useLocation, useNavigate, Link } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
@@ -391,7 +400,7 @@ export default function Checkout() {
               <div className="space-y-3 max-h-48 overflow-y-auto">
                 {cartItems.map((item) => (
                   <div key={item.id} className="flex items-center gap-3">
-                    <img src={item.image} alt={item.name} className="w-10 h-10 object-contain rounded-lg border border-[#C7D3C1] bg-white p-0.5 flex-shrink-0" />
+                    <img src={resolveImageUrl(item.image)} alt={item.name} className="w-10 h-10 object-contain rounded-lg border border-[#C7D3C1] bg-white p-0.5 flex-shrink-0" onError={(e) => { e.target.src = 'https://placehold.co/40x40?text=?'; }} />
                     <div className="flex-1 min-w-0">
                       <p className="text-xs font-semibold text-[#222222] line-clamp-1">{item.name}</p>
                       <p className="text-xs text-slate-500">Qty: {item.quantity}</p>

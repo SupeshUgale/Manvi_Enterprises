@@ -1,4 +1,13 @@
 import React, { useEffect } from 'react';
+
+const BACKEND_URL = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5000';
+function resolveImageUrl(img) {
+  if (!img) return 'https://placehold.co/40x40?text=?';
+  if (img.startsWith('http')) return img;
+  if (img.startsWith('/product/')) return img;
+  if (img.startsWith('/uploads/')) return `${BACKEND_URL}${img}`;
+  return img;
+}
 import { useLocation, Link } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import {
@@ -177,7 +186,7 @@ export default function OrderSuccess() {
                     <tr key={item.id}>
                       <td className="py-4 px-2">
                         <div className="flex items-center gap-3">
-                          <img src={item.image} alt={item.name} className="w-10 h-10 object-contain rounded-lg bg-white border border-[#C7D3C1] p-0.5 flex-shrink-0" />
+                          <img src={resolveImageUrl(item.image)} alt={item.name} className="w-10 h-10 object-contain rounded-lg bg-white border border-[#C7D3C1] p-0.5 flex-shrink-0" onError={(e) => { e.target.src = 'https://placehold.co/40x40?text=?'; }} />
                           <div>
                             <p className="font-bold text-[#222222]">{item.name}</p>
                             <p className="text-xs text-slate-500 font-mono">SKU: {item.sku}</p>

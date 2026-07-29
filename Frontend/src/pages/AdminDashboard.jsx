@@ -1,4 +1,13 @@
 import React, { useState, useEffect } from 'react';
+
+const BACKEND_URL = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5000';
+function resolveImageUrl(img) {
+  if (!img) return 'https://placehold.co/200x200?text=No+Image';
+  if (img.startsWith('http')) return img;
+  if (img.startsWith('/product/')) return img;
+  if (img.startsWith('/uploads/')) return `${BACKEND_URL}${img}`;
+  return img;
+}
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import api from '../api/axios';
@@ -301,9 +310,7 @@ export default function AdminDashboard() {
           <div key={product._id} className="bg-white border border-gray-200 rounded-2xl overflow-hidden hover:border-emerald-300 transition group">
             <div className="aspect-video bg-gray-50 flex items-center justify-center overflow-hidden">
               <img
-                src={product.image?.startsWith('/uploads')
-                  ? `${import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5000'}${product.image}`
-                  : product.image}
+                src={resolveImageUrl(product.image)}
                 alt={product.name}
                 className="h-28 object-contain p-3"
                 onError={e => { e.target.src = 'https://placehold.co/200x200?text=No+Image'; }}

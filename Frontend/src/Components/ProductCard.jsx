@@ -28,6 +28,22 @@ function StockBadge({ stock }) {
   );
 }
 
+const BACKEND_URL = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5000';
+
+/**
+ * Resolve product image URL correctly:
+ * - /product/... → served from Netlify frontend CDN (relative path)
+ * - /uploads/... → served from Render backend (prefix with backend URL)
+ * - http(s)://... → absolute URL, use as-is
+ */
+function resolveImageUrl(img) {
+  if (!img) return 'https://placehold.co/200x200?text=No+Image';
+  if (img.startsWith('http')) return img;
+  if (img.startsWith('/product/')) return img; // served by Netlify CDN
+  if (img.startsWith('/uploads/')) return `${BACKEND_URL}${img}`;
+  return img;
+}
+
 const ProductCard = ({ product, onAddToCart }) => {
   const { toggleWishlist, isInWishlist } = useWishlist();
   const { addToCart } = useCart();
@@ -103,9 +119,10 @@ const ProductCard = ({ product, onAddToCart }) => {
       <div className="bg-[#FAFAF8] dark:bg-gray-700/50 p-4 flex items-center justify-center border-b border-[#E5E7EB] dark:border-gray-700 h-48 relative overflow-hidden">
         <Link to={`/product/${product.id}`} className="w-full h-full flex items-center justify-center">
           <img
-            src={product.image}
+            src={resolveImageUrl(product.image)}
             alt={product.name}
             className="max-w-full h-36 object-contain transition-transform duration-500 group-hover:scale-110"
+            onError={(e) => { e.target.src = 'https://placehold.co/200x200?text=No+Image'; }}
           />
         </Link>
 

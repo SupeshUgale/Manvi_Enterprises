@@ -1,4 +1,13 @@
 import React, { useState, useEffect } from "react";
+
+const BACKEND_URL = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5000';
+function resolveImageUrl(img) {
+  if (!img) return 'https://placehold.co/60x60?text=?';
+  if (img.startsWith('http')) return img;
+  if (img.startsWith('/product/')) return img;
+  if (img.startsWith('/uploads/')) return `${BACKEND_URL}${img}`;
+  return img;
+}
 import { useNavigate, Link, useLocation } from "react-router-dom";
 import { useWishlist } from "../context/WishlistContext";
 import { useCart } from "../context/CartContext";
@@ -371,7 +380,7 @@ export default function UserDashboard() {
           {wishlistItems.map(product => (
             <div key={product.id} className="bg-white dark:bg-gray-800 border border-[#E5E7EB] dark:border-gray-700 hover:border-[#2F5D50] rounded-2xl p-4 flex items-center gap-4 transition group">
               <div className="w-16 h-16 bg-[#F2F4F3] dark:bg-gray-700 rounded-xl overflow-hidden shrink-0">
-                <img src={product.image} alt={product.name} className="w-full h-full object-contain p-1.5" />
+                <img src={resolveImageUrl(product.image)} alt={product.name} className="w-full h-full object-contain p-1.5" onError={(e) => { e.target.src = 'https://placehold.co/60x60?text=?'; }} />
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-xs font-bold text-[#1F2937] dark:text-white line-clamp-2 leading-tight">{product.name}</p>

@@ -1,4 +1,13 @@
 import React, { useState } from 'react';
+
+const BACKEND_URL = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5000';
+function resolveImageUrl(img) {
+  if (!img) return 'https://placehold.co/80x80?text=?';
+  if (img.startsWith('http')) return img;
+  if (img.startsWith('/product/')) return img;
+  if (img.startsWith('/uploads/')) return `${BACKEND_URL}${img}`;
+  return img;
+}
 import { Link, useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import {
@@ -99,9 +108,10 @@ export default function Cart() {
                   {/* Image & Product Info */}
                   <div className="flex items-center space-x-4">
                     <img
-                      src={item.image}
+                      src={resolveImageUrl(item.image)}
                       alt={item.name}
                       className="w-20 h-20 object-contain rounded-xl border border-[#C7D3C1] bg-white flex-shrink-0 p-1"
+                      onError={(e) => { e.target.src = 'https://placehold.co/80x80?text=?'; }}
                     />
                     <div>
                       <span className="text-xs font-bold text-[#8E9C86] bg-[#C7D3C1]/50 px-2.5 py-0.5 rounded border border-[#C7D3C1]">
