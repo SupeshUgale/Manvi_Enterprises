@@ -472,8 +472,8 @@ const seedData = async () => {
 
     // Create 1 Admin User
     const adminUser = await User.create({
-      name: "Admin User",
-      email: "admin@manvienterprises.com",
+      name: "Manvi Admin",
+      email: "manvienterprises.official@gmail.com",
       password: "Admin@123456",
       phone: "+91 98765 43210",
       mobile: "+91 98765 43210",
