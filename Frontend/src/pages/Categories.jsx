@@ -16,10 +16,30 @@ export default function Categories() {
   const { categories, products } = useProduct();
   const { user } = useAuth();
 
+  const matchesCategoryLogic = (productCat = "", activeCat = "") => {
+    if (!activeCat || activeCat === "all") return true;
+    const pCat = productCat.toLowerCase().trim();
+    const aCat = activeCat.toLowerCase().trim();
+
+    if (pCat === aCat || pCat.replace(/[\s-]/g, "") === aCat.replace(/[\s-]/g, "")) return true;
+
+    if (aCat === "battery" || aCat === "batteries") {
+      return pCat.includes("battery") || pCat.includes("car") || pCat.includes("bike");
+    }
+
+    if (aCat.includes("inverter") || aCat === "ups") {
+      return pCat.includes("inverter") || pCat.includes("ups");
+    }
+
+    if (aCat.includes("oil") || aCat.includes("lube") || aCat === "engine-oil") {
+      return pCat.includes("oil") || pCat.includes("lube");
+    }
+
+    return pCat.includes(aCat) || aCat.includes(pCat);
+  };
+
   const getProductCount = (slug) => {
-    const count = products.filter(
-      (p) => p.category === slug || (slug === "Inverter" && (p.category === "Inverter" || p.category === "UPS"))
-    ).length;
+    const count = products.filter((p) => matchesCategoryLogic(p.category, slug)).length;
     return `${count} Product${count === 1 ? "" : "s"} Available`;
   };
 

@@ -22,7 +22,7 @@ const Products = () => {
   const [activeCategory, setActiveCategory] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedBrand, setSelectedBrand] = useState("all");
-  const [priceRange, setPriceRange] = useState(15000); // Max Price limit
+  const [priceRange, setPriceRange] = useState(50000); // Max Price limit (default 50k to show all)
   const [minRating, setMinRating] = useState("0");
   const [stockOnly, setStockOnly] = useState(false);
 
@@ -33,18 +33,22 @@ const Products = () => {
     { label: "All Products", value: "all", icon: LayoutGrid },
     ...categories.map((c) => ({
       label: c.name,
-      value: c.slug,
+      value: c.slug || c.name,
       icon: ICON_MAP[c.icon] || Layers,
     })),
   ];
 
 
-  // Extract category from URL search query if exists
+  // Extract category & brand from URL search query if exists
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const cat = params.get("category");
+    const brandParam = params.get("brand");
     if (cat) {
       setActiveCategory(cat);
+    }
+    if (brandParam) {
+      setSelectedBrand(brandParam);
     }
   }, [location]);
 
@@ -52,21 +56,41 @@ const Products = () => {
   const cartCount = cartItems.reduce((sum, item) => sum + item.quantity, 0);
 
   // Extract unique brands for brand filter
-  const brandsList = ["all", ...new Set(products.map((p) => p.brand))];
+  const brandsList = ["all", ...new Set(products.map((p) => p.brand).filter(Boolean))];
+
+  // Robust Category Matcher
+  const matchesCategoryLogic = (productCat = "", activeCat = "") => {
+    if (!activeCat || activeCat === "all") return true;
+    const pCat = productCat.toLowerCase().trim();
+    const aCat = activeCat.toLowerCase().trim();
+
+    if (pCat === aCat || pCat.replace(/[\s-]/g, "") === aCat.replace(/[\s-]/g, "")) return true;
+
+    if (aCat === "battery" || aCat === "batteries") {
+      return pCat.includes("battery") || pCat.includes("car") || pCat.includes("bike");
+    }
+
+    if (aCat.includes("inverter") || aCat === "ups") {
+      return pCat.includes("inverter") || pCat.includes("ups");
+    }
+
+    if (aCat.includes("oil") || aCat.includes("lube") || aCat === "engine-oil") {
+      return pCat.includes("oil") || pCat.includes("lube");
+    }
+
+    return pCat.includes(aCat) || aCat.includes(pCat);
+  };
 
   // Filtering products
   const filteredProducts = products.filter((product) => {
     // 1. Category Filter
-    const matchesCategory =
-      activeCategory === "all" ||
-      product.category === activeCategory ||
-      (activeCategory === "Inverter" && (product.category === "Inverter" || product.category === "UPS"));
+    const matchesCategory = matchesCategoryLogic(product.category, activeCategory);
 
     // 2. Search query
     const matchesSearch =
       product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      product.brand.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      product.sku.toLowerCase().includes(searchQuery.toLowerCase());
+      (product.brand && product.brand.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      (product.sku && product.sku.toLowerCase().includes(searchQuery.toLowerCase()));
 
     // 3. Brand Filter
     const matchesBrand = selectedBrand === "all" || product.brand === selectedBrand;
@@ -75,7 +99,7 @@ const Products = () => {
     const matchesPrice = product.price <= priceRange;
 
     // 5. Rating Limit
-    const matchesRating = product.rating >= Number(minRating);
+    const matchesRating = (product.rating || 5) >= Number(minRating);
 
     // 6. Stock availability
     const matchesStock = !stockOnly || product.stock > 0;

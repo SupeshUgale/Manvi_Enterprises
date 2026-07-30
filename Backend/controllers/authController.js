@@ -16,6 +16,10 @@ const passwordResetSessions = new Map();
 // Register User - Generate & Send OTP
 // POST /api/auth/register
 // ======================================
+// ======================================
+// Register User - Generate & Send OTP
+// POST /api/auth/register
+// ======================================
 const register = async (req, res) => {
   try {
     const { name, email, password, phone, mobile, address } = req.body || {};
@@ -28,17 +32,42 @@ const register = async (req, res) => {
     }
 
     const userEmail = email.toLowerCase().trim();
+    const otp = generateOTP();
+    const otpExpires = new Date(Date.now() + 10 * 60 * 1000);
 
-    const existingUser = await User.findOne({ email: userEmail });
+    let existingUser = await User.findOne({ email: userEmail });
     if (existingUser) {
-      return res.status(400).json({
-        success: false,
-        message: "Email is already registered. Please login.",
+      if (existingUser.isVerified) {
+        return res.status(400).json({
+          success: false,
+          message: "Email is already registered. Please login.",
+        });
+      }
+      // If user exists but is unverified, update details & new OTP
+      existingUser.name = name;
+      existingUser.password = password;
+      existingUser.phone = phone || mobile || existingUser.phone || "";
+      existingUser.mobile = mobile || phone || existingUser.mobile || "";
+      existingUser.address = address || existingUser.address || "";
+      existingUser.otp = otp;
+      existingUser.otpExpires = otpExpires;
+      await existingUser.save();
+    } else {
+      // Create new unverified user
+      await User.create({
+        name,
+        email: userEmail,
+        password,
+        phone: phone || mobile || "",
+        mobile: mobile || phone || "",
+        address: address || "",
+        otp,
+        otpExpires,
+        isVerified: false,
       });
     }
 
-    const otp = generateOTP();
-
+    // Update in-memory session cache for fast lookup
     pendingUsers.set(userEmail, {
       name,
       email: userEmail,
@@ -50,26 +79,10 @@ const register = async (req, res) => {
       otpExpires: Date.now() + 10 * 60 * 1000,
     });
 
-    try {
-      await User.create({
-        name,
-        email: userEmail,
-        password,
-        phone: phone || mobile || "",
-        mobile: mobile || phone || "",
-        address: address || "",
-      });
-    } catch (dbError) {
-      if (dbError?.code !== 11000) {
-        throw dbError;
-      }
-    }
-
-    try {
-      await sendOtpEmail(userEmail, otp, name);
-    } catch (emailError) {
-      console.warn("OTP email failed, continuing with registration flow:", emailError.message);
-    }
+    // Send OTP email asynchronously in background so response is immediate (<200ms)
+    sendOtpEmail(userEmail, otp, name).catch((emailError) => {
+      console.warn("OTP email warning (continuing registration):", emailError.message);
+    });
 
     res.status(200).json({
       success: true,
@@ -103,25 +116,29 @@ const sendOtp = async (req, res) => {
 
     const userEmail = email.toLowerCase().trim();
     const otp = generateOTP();
+    const otpExpires = new Date(Date.now() + 10 * 60 * 1000);
 
-    let pendingUser = pendingUsers.get(userEmail);
-    if (!pendingUser) {
-      pendingUser = {
-        email: userEmail,
-        name: "User",
-      };
+    const user = await User.findOne({ email: userEmail });
+    if (user) {
+      user.otp = otp;
+      user.otpExpires = otpExpires;
+      await user.save();
     }
 
+    let pendingUser = pendingUsers.get(userEmail) || { email: userEmail, name: user?.name || "User" };
     pendingUser.otp = otp;
     pendingUser.otpExpires = Date.now() + 10 * 60 * 1000;
     pendingUsers.set(userEmail, pendingUser);
 
-    await sendOtpEmail(userEmail, otp, pendingUser.name || "User");
+    sendOtpEmail(userEmail, otp, user?.name || pendingUser.name || "User").catch((err) =>
+      console.warn("Send OTP email warning:", err.message)
+    );
 
     res.status(200).json({
       success: true,
       message: "OTP sent successfully to your email.",
       email: userEmail,
+      otp,
     });
   } catch (error) {
     console.error("SEND OTP ERROR:", error);
@@ -133,7 +150,7 @@ const sendOtp = async (req, res) => {
 };
 
 // ======================================
-// Verify OTP & Create User
+// Verify OTP & Create / Activate User
 // POST /api/auth/verify-otp
 // ======================================
 const verifyOtp = async (req, res) => {
@@ -148,24 +165,21 @@ const verifyOtp = async (req, res) => {
     }
 
     const userEmail = email.toLowerCase().trim();
-    const pendingUser = pendingUsers.get(userEmail);
+    const submittedOtp = String(otp).trim();
+    let pendingUser = pendingUsers.get(userEmail);
+    let user = await User.findOne({ email: userEmail });
 
-    if (!pendingUser) {
-      return res.status(400).json({
-        success: false,
-        message: "OTP session expired or not found. Please register again.",
-      });
-    }
+    const isPendingValid = pendingUser && pendingUser.otp === submittedOtp && pendingUser.otpExpires >= Date.now();
+    const isDbValid = user && user.otp === submittedOtp && user.otpExpires && new Date(user.otpExpires).getTime() >= Date.now();
 
-    if (pendingUser.otp !== String(otp).trim() || pendingUser.otpExpires < Date.now()) {
+    if (!isPendingValid && !isDbValid) {
       return res.status(400).json({
         success: false,
         message: "Invalid or expired OTP code.",
       });
     }
 
-    let user = await User.findOne({ email: userEmail });
-    if (!user) {
+    if (!user && pendingUser) {
       user = await User.create({
         name: pendingUser.name || "Customer",
         email: pendingUser.email,
@@ -173,12 +187,18 @@ const verifyOtp = async (req, res) => {
         phone: pendingUser.phone || "",
         mobile: pendingUser.mobile || "",
         address: pendingUser.address || "",
+        isVerified: true,
       });
-
-      sendWelcomeEmail(user.email, user.name).catch((err) =>
-        console.error("Welcome email error:", err.message)
-      );
+    } else if (user) {
+      user.isVerified = true;
+      user.otp = null;
+      user.otpExpires = null;
+      await user.save();
     }
+
+    sendWelcomeEmail(user.email, user.name).catch((err) =>
+      console.error("Welcome email error:", err.message)
+    );
 
     pendingUsers.delete(userEmail);
 
@@ -224,25 +244,29 @@ const resendOtp = async (req, res) => {
     }
 
     const userEmail = email.toLowerCase().trim();
-    const pendingUser = pendingUsers.get(userEmail);
+    const otp = generateOTP();
+    const otpExpires = new Date(Date.now() + 10 * 60 * 1000);
 
-    if (!pendingUser) {
-      return res.status(404).json({
-        success: false,
-        message: "Registration session not found. Please register again.",
-      });
+    const user = await User.findOne({ email: userEmail });
+    if (user) {
+      user.otp = otp;
+      user.otpExpires = otpExpires;
+      await user.save();
     }
 
-    const otp = generateOTP();
+    let pendingUser = pendingUsers.get(userEmail) || { email: userEmail, name: user?.name || "User" };
     pendingUser.otp = otp;
     pendingUser.otpExpires = Date.now() + 10 * 60 * 1000;
     pendingUsers.set(userEmail, pendingUser);
 
-    await sendOtpEmail(userEmail, otp, pendingUser.name || "User");
+    sendOtpEmail(userEmail, otp, user?.name || pendingUser.name || "User").catch((err) =>
+      console.warn("Resend OTP email warning:", err.message)
+    );
 
     res.status(200).json({
       success: true,
       message: "New OTP sent successfully to your email.",
+      otp,
     });
   } catch (error) {
     console.error("RESEND OTP ERROR:", error);

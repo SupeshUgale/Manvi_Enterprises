@@ -41,7 +41,8 @@ function resolveImageUrl(img) {
   if (img.startsWith('http')) return img;
   if (img.startsWith('/product/')) return img; // served by Netlify CDN
   if (img.startsWith('/uploads/')) return `${BACKEND_URL}${img}`;
-  return img;
+  if (img.startsWith('/')) return img;
+  return `/product/${img}`;
 }
 
 const ProductCard = ({ product, onAddToCart }) => {

@@ -6,7 +6,8 @@ function resolveImageUrl(img) {
   if (img.startsWith('http')) return img;
   if (img.startsWith('/product/')) return img;
   if (img.startsWith('/uploads/')) return `${BACKEND_URL}${img}`;
-  return img;
+  if (img.startsWith('/')) return img;
+  return `/product/${img}`;
 }
 import { useParams, useNavigate, Link, useLocation } from "react-router-dom";
 import { useCart } from "../context/CartContext";
@@ -38,9 +39,12 @@ export default function ProductDetails() {
   const { addToCart } = useCart();
   const { toggleWishlist, isInWishlist } = useWishlist();
   const { user, requireAuth } = useAuth();
-  const { products } = useProduct();
-
-  const product = products.find((p) => p.id === Number(id));
+  const product = products.find(
+    (p) =>
+      String(p.id) === String(id) ||
+      String(p._id) === String(id) ||
+      (Boolean(p.id) && Number(p.id) === Number(id) && !isNaN(Number(id)))
+  );
 
 
   // State management

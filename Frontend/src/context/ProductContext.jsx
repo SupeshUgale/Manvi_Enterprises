@@ -45,6 +45,9 @@ export const ProductProvider = ({ children }) => {
         productsService.getCategories(),
       ]);
 
+      let finalProducts = [];
+      let finalCategories = [];
+
       if (fetchedProducts.status === 'fulfilled') {
         const raw = fetchedProducts.value;
         const list = Array.isArray(raw.products)
@@ -54,9 +57,9 @@ export const ProductProvider = ({ children }) => {
           : Array.isArray(raw)
           ? raw
           : [];
-        const normalized = list.map(p => ({ ...p, id: p._id || p.id }));
-        setProducts(normalized);
+        finalProducts = list.map(p => ({ ...p, id: p._id || p.id }));
       }
+
       if (fetchedCategories.status === 'fulfilled') {
         const raw = fetchedCategories.value;
         const list = Array.isArray(raw.categories)
@@ -66,11 +69,24 @@ export const ProductProvider = ({ children }) => {
           : Array.isArray(raw)
           ? raw
           : [];
-        setCategories(list);
+        finalCategories = list;
       }
+
+      // Fallback to static datasets if API results are empty or rejected
+      if (finalProducts.length === 0) {
+        finalProducts = initialProducts.map(p => ({ ...p, id: p._id || p.id }));
+      }
+      if (finalCategories.length === 0) {
+        finalCategories = INITIAL_CATEGORIES;
+      }
+
+      setProducts(finalProducts);
+      setCategories(finalCategories);
     } catch (err) {
-      console.error('Error fetching catalogue from MongoDB:', err);
+      console.error('Error fetching catalogue from MongoDB, using fallback:', err);
       setError(err);
+      setProducts(initialProducts.map(p => ({ ...p, id: p._id || p.id })));
+      setCategories(INITIAL_CATEGORIES);
     } finally {
       setLoading(false);
     }
