@@ -79,10 +79,18 @@ const register = async (req, res) => {
       otpExpires: Date.now() + 10 * 60 * 1000,
     });
 
-    // Send OTP email asynchronously in background so response is immediate (<200ms)
-    sendOtpEmail(userEmail, otp, name).catch((emailError) => {
-      console.warn("OTP email warning (continuing registration):", emailError.message);
-    });
+    console.log(`🔑 [OTP SYSTEM] Generated Registration OTP for ${userEmail}: ${otp}`);
+
+    // Await OTP email sending so serverless/cloud environments finish email dispatch
+    try {
+      await sendOtpEmail(userEmail, otp, name);
+    } catch (emailError) {
+      console.error("❌ Registration OTP email failed to send:", emailError.message);
+      return res.status(500).json({
+        success: false,
+        message: `Failed to send verification OTP email: ${emailError.message}. Please verify SMTP settings in your environment variables.`,
+      });
+    }
 
     res.status(200).json({
       success: true,
@@ -130,9 +138,18 @@ const sendOtp = async (req, res) => {
     pendingUser.otpExpires = Date.now() + 10 * 60 * 1000;
     pendingUsers.set(userEmail, pendingUser);
 
-    sendOtpEmail(userEmail, otp, user?.name || pendingUser.name || "User").catch((err) =>
-      console.warn("Send OTP email warning:", err.message)
-    );
+    console.log(`🔑 [OTP SYSTEM] Generated Standalone OTP for ${userEmail}: ${otp}`);
+
+    // Await OTP email sending to ensure execution completes in cloud environments
+    try {
+      await sendOtpEmail(userEmail, otp, user?.name || pendingUser.name || "User");
+    } catch (emailError) {
+      console.error("❌ Standalone OTP email failed to send:", emailError.message);
+      return res.status(500).json({
+        success: false,
+        message: `Failed to send OTP email: ${emailError.message}. Please verify SMTP configuration.`,
+      });
+    }
 
     res.status(200).json({
       success: true,
@@ -259,9 +276,18 @@ const resendOtp = async (req, res) => {
     pendingUser.otpExpires = Date.now() + 10 * 60 * 1000;
     pendingUsers.set(userEmail, pendingUser);
 
-    sendOtpEmail(userEmail, otp, user?.name || pendingUser.name || "User").catch((err) =>
-      console.warn("Resend OTP email warning:", err.message)
-    );
+    console.log(`🔑 [OTP SYSTEM] Resent OTP for ${userEmail}: ${otp}`);
+
+    // Await OTP email sending
+    try {
+      await sendOtpEmail(userEmail, otp, user?.name || pendingUser.name || "User");
+    } catch (emailError) {
+      console.error("❌ Resend OTP email failed to send:", emailError.message);
+      return res.status(500).json({
+        success: false,
+        message: `Failed to resend OTP email: ${emailError.message}. Please try again later.`,
+      });
+    }
 
     res.status(200).json({
       success: true,
@@ -368,12 +394,29 @@ const forgotPassword = async (req, res) => {
     }
 
     const otp = generateOTP();
+    const otpExpires = new Date(Date.now() + 10 * 60 * 1000);
+
+    // Save OTP to MongoDB User record so it survives serverless restarts & multi-instance deploys
+    user.otp = otp;
+    user.otpExpires = otpExpires;
+    await user.save();
+
     passwordResetSessions.set(userEmail, {
       otp,
       otpExpires: Date.now() + 10 * 60 * 1000,
     });
 
-    await sendPasswordResetEmail(userEmail, otp, user.name);
+    console.log(`🔑 [OTP SYSTEM] Generated Password Reset OTP for ${userEmail}: ${otp}`);
+
+    try {
+      await sendPasswordResetEmail(userEmail, otp, user.name);
+    } catch (emailError) {
+      console.error("❌ Password reset email failed to send:", emailError.message);
+      return res.status(500).json({
+        success: false,
+        message: `Failed to send password reset email: ${emailError.message}. Please verify SMTP settings.`,
+      });
+    }
 
     res.status(200).json({
       success: true,
@@ -404,21 +447,7 @@ const resetPassword = async (req, res) => {
     }
 
     const userEmail = email.toLowerCase().trim();
-    const resetSession = passwordResetSessions.get(userEmail);
-
-    if (!resetSession) {
-      return res.status(400).json({
-        success: false,
-        message: "Password reset session expired. Please try again.",
-      });
-    }
-
-    if (resetSession.otp !== String(otp).trim() || resetSession.otpExpires < Date.now()) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid or expired OTP code.",
-      });
-    }
+    const submittedOtp = String(otp).trim();
 
     const user = await User.findOne({ email: userEmail });
     if (!user) {
@@ -428,7 +457,20 @@ const resetPassword = async (req, res) => {
       });
     }
 
+    const resetSession = passwordResetSessions.get(userEmail);
+    const isDbOtpValid = user.otp && user.otp === submittedOtp && user.otpExpires && new Date(user.otpExpires).getTime() >= Date.now();
+    const isSessionOtpValid = resetSession && resetSession.otp === submittedOtp && resetSession.otpExpires >= Date.now();
+
+    if (!isDbOtpValid && !isSessionOtpValid) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid or expired OTP code.",
+      });
+    }
+
     user.password = await bcrypt.hash(newPassword, 10);
+    user.otp = null;
+    user.otpExpires = null;
     await user.save();
 
     passwordResetSessions.delete(userEmail);

@@ -8,10 +8,10 @@ const sendEmail = async (options) => {
     const smtpHost = process.env.SMTP_HOST || "smtp.gmail.com";
     const smtpPort = Number(process.env.SMTP_PORT) || 587;
     const smtpUser = process.env.SMTP_USER;
-    const smtpPass = process.env.SMTP_PASS;
+    const smtpPass = process.env.SMTP_PASS ? process.env.SMTP_PASS.replace(/\s+/g, "") : "";
 
     if (!smtpUser || !smtpPass) {
-      console.warn("⚠️ SMTP credentials missing in .env file.");
+      console.warn("⚠️ SMTP credentials (SMTP_USER or SMTP_PASS) missing or empty in environment configuration.");
     }
 
     const transporter = nodemailer.createTransport({
@@ -25,6 +25,9 @@ const sendEmail = async (options) => {
       tls: {
         rejectUnauthorized: false,
       },
+      connectionTimeout: 10000,
+      greetingTimeout: 10000,
+      socketTimeout: 15000,
     });
 
     const senderEmail = smtpUser;
