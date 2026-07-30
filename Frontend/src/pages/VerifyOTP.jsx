@@ -15,7 +15,7 @@ export default function VerifyOTP() {
   const redirect = location.state?.redirect || "/";
 
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
-  const [timer, setTimer] = useState(300); // 5 minutes
+  const [timer, setTimer] = useState(2); // 2 seconds
   const [canResend, setCanResend] = useState(false);
   const [isVerifying, setIsVerifying] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
@@ -122,7 +122,7 @@ export default function VerifyOTP() {
   const handleResend = async () => {
     try {
       await authService.sendOtp(email);
-      setTimer(300);
+      setTimer(2);
       setCanResend(false);
       setOtp(["", "", "", "", "", ""]);
       inputRefs.current[0].focus();
