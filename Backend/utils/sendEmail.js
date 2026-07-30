@@ -1,55 +1,59 @@
 const nodemailer = require("nodemailer");
 
 /**
- * Utility to send transactional emails via Nodemailer with headers optimized for Inbox delivery.
+ * Helper to create Nodemailer transport with timeouts
+ */
+const createTransporter = (host, port, user, pass) => {
+  return nodemailer.createTransport({
+    host,
+    port,
+    secure: port === 465, // true for 465, false for 587
+    auth: {
+      user,
+      pass,
+    },
+    tls: {
+      rejectUnauthorized: false,
+    },
+    connectionTimeout: 8000,
+    greetingTimeout: 8000,
+    socketTimeout: 12000,
+  });
+};
+
+/**
+ * Utility to send transactional emails via Nodemailer with dual-port fallback optimized for Cloud Hosts.
  */
 const sendEmail = async (options) => {
-  try {
-    const smtpHost = process.env.SMTP_HOST || "smtp.gmail.com";
-    const smtpPort = Number(process.env.SMTP_PORT) || 587;
-    const smtpUser = process.env.SMTP_USER;
-    const smtpPass = process.env.SMTP_PASS ? process.env.SMTP_PASS.replace(/\s+/g, "") : "";
+  const smtpHost = process.env.SMTP_HOST || "smtp.gmail.com";
+  const smtpUser = process.env.SMTP_USER || "manvienterprises.official@gmail.com";
+  const rawPass = process.env.SMTP_PASS || "oxwb ufsr egza frwx";
+  const smtpPass = rawPass.replace(/\s+/g, "");
 
-    if (!smtpUser || !smtpPass) {
-      console.warn("⚠️ SMTP credentials (SMTP_USER or SMTP_PASS) missing or empty in environment configuration.");
-    }
+  // Port 465 (SSL) works best on cloud hosts like Render/Vercel/AWS where port 587 is often blocked
+  const primaryPort = Number(process.env.SMTP_PORT) || 465;
+  const fallbackPort = primaryPort === 465 ? 587 : 465;
 
-    const transporter = nodemailer.createTransport({
-      host: smtpHost,
-      port: smtpPort,
-      secure: smtpPort === 465, // true for 465, false for other ports
-      auth: {
-        user: smtpUser,
-        pass: smtpPass,
-      },
-      tls: {
-        rejectUnauthorized: false,
-      },
-      connectionTimeout: 10000,
-      greetingTimeout: 10000,
-      socketTimeout: 15000,
-    });
+  const recipient = options.email || options.to;
+  if (!recipient) {
+    throw new Error("No recipient email address provided.");
+  }
 
-    const senderEmail = smtpUser;
-    const senderName = "Manvi Enterprises";
+  const senderName = "Manvi Enterprises";
+  const senderEmail = smtpUser;
 
-    const recipient = options.email || options.to;
-    if (!recipient) {
-      throw new Error("No recipient email address provided.");
-    }
+  // Default plain text fallback if not provided
+  const plainTextBody =
+    options.text ||
+    options.message ||
+    (options.otp
+      ? `Your OTP is ${options.otp}. Valid for 10 minutes.`
+      : "Thank you for connecting with Manvi Enterprises.");
 
-    // Default plain text fallback if not provided
-    const plainTextBody =
-      options.text ||
-      options.message ||
-      (options.otp
-        ? `Your OTP is ${options.otp}. Valid for 10 minutes.`
-        : "Thank you for connecting with Manvi Enterprises.");
-
-    // Default HTML if not provided
-    const htmlBody =
-      options.html ||
-      `<!DOCTYPE html>
+  // Default HTML if not provided
+  const htmlBody =
+    options.html ||
+    `<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -72,35 +76,41 @@ const sendEmail = async (options) => {
 </body>
 </html>`;
 
-    const mailOptions = {
-      from: `"${senderName}" <${senderEmail}>`,
-      to: recipient,
-      subject: options.subject || "Notification from Manvi Enterprises",
-      replyTo: senderEmail,
-      text: plainTextBody,
-      html: htmlBody,
-      headers: {
-        "X-Mailer": "Manvi Enterprises Express Server",
-        "X-Priority": "3 (Normal)",
-        "X-MSMail-Priority": "Normal",
-        "Importance": "Normal",
-        "List-Unsubscribe": `<mailto:${senderEmail}?subject=unsubscribe>`,
-        "Auto-Submitted": "auto-generated",
-        ...options.headers,
-      },
-    };
+  const mailOptions = {
+    from: `"${senderName}" <${senderEmail}>`,
+    to: recipient,
+    subject: options.subject || "Notification from Manvi Enterprises",
+    replyTo: senderEmail,
+    text: plainTextBody,
+    html: htmlBody,
+    headers: {
+      "X-Mailer": "Manvi Enterprises Express Server",
+      "X-Priority": "3 (Normal)",
+      "X-MSMail-Priority": "Normal",
+      Importance: "Normal",
+      "List-Unsubscribe": `<mailto:${senderEmail}?subject=unsubscribe>`,
+      "Auto-Submitted": "auto-generated",
+      ...options.headers,
+    },
+  };
 
+  // Dual-port attempt: try primary port (465 SSL), if blocked/times out, try fallback (587 STARTTLS)
+  try {
+    const transporter = createTransporter(smtpHost, primaryPort, smtpUser, smtpPass);
     const info = await transporter.sendMail(mailOptions);
-
-    console.log("✅ Email successfully sent to", recipient, "| MessageID:", info.messageId);
-
-    return {
-      success: true,
-      messageId: info.messageId,
-    };
-  } catch (error) {
-    console.error("❌ Email Error:", error.message);
-    throw error;
+    console.log(`✅ Email successfully sent to ${recipient} via port ${primaryPort} | MessageID: ${info.messageId}`);
+    return { success: true, messageId: info.messageId };
+  } catch (primaryError) {
+    console.warn(`⚠️ Primary SMTP attempt (port ${primaryPort}) failed: ${primaryError.message}. Retrying via fallback port ${fallbackPort}...`);
+    try {
+      const fallbackTransporter = createTransporter(smtpHost, fallbackPort, smtpUser, smtpPass);
+      const info = await fallbackTransporter.sendMail(mailOptions);
+      console.log(`✅ Email successfully sent to ${recipient} via fallback port ${fallbackPort} | MessageID: ${info.messageId}`);
+      return { success: true, messageId: info.messageId };
+    } catch (fallbackError) {
+      console.error("❌ Email Error (Both SMTP ports 465 & 587 failed):", fallbackError.message);
+      throw new Error(`Email delivery failed: ${fallbackError.message}`);
+    }
   }
 };
 
