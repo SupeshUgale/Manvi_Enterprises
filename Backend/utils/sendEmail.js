@@ -7,7 +7,7 @@ const createTransporter = (host, port, user, pass) => {
   return nodemailer.createTransport({
     host,
     port,
-    secure: port === 465, // true for 465, false for 587
+    secure: port === 465,
     auth: {
       user,
       pass,
@@ -15,6 +15,8 @@ const createTransporter = (host, port, user, pass) => {
     tls: {
       rejectUnauthorized: false,
     },
+    // Force IPv4 - Render & many cloud hosts block IPv6 outbound causing ENETUNREACH
+    family: 4,
     connectionTimeout: 8000,
     greetingTimeout: 8000,
     socketTimeout: 12000,
