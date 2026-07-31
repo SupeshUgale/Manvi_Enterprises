@@ -38,8 +38,9 @@ export default function ProductDetails() {
   const location = useLocation();
   const { addToCart } = useCart();
   const { toggleWishlist, isInWishlist } = useWishlist();
+  const { products } = useProduct();
   const { user, requireAuth } = useAuth();
-  const product = products.find(
+  const product = (products || []).find(
     (p) =>
       String(p.id) === String(id) ||
       String(p._id) === String(id) ||

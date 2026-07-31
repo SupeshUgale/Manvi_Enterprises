@@ -26,7 +26,8 @@ export const AuthProvider = ({ children }) => {
           setUser(null);
         }
       } catch (error) {
-        console.error("Session verification failed:", error);
+        // Handle expired/stale tokens gracefully on session init
+        console.warn("Session token expired or reset:", error.message || error);
         localStorage.removeItem("token");
         localStorage.removeItem("user");
         setUser(null);

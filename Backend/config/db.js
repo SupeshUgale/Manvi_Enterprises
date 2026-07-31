@@ -1,7 +1,8 @@
 const mongoose = require("mongoose");
 const dns = require("dns");
 
-// Force IPv4 first
+// Force Google DNS & IPv4 first to prevent Windows/ISP SRV lookup failures
+dns.setServers(["8.8.8.8", "8.8.4.4"]);
 dns.setDefaultResultOrder("ipv4first");
 
 const connectDB = async () => {

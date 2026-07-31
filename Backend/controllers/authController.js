@@ -81,15 +81,11 @@ const register = async (req, res) => {
 
     console.log(`🔑 [OTP SYSTEM] Generated Registration OTP for ${userEmail}: ${otp}`);
 
-    // Await OTP email sending so serverless/cloud environments finish email dispatch
     try {
       await sendOtpEmail(userEmail, otp, name);
     } catch (emailError) {
-      console.error("❌ Registration OTP email failed to send:", emailError.message);
-      return res.status(500).json({
-        success: false,
-        message: `Failed to send verification OTP email: ${emailError.message}. Please verify SMTP settings in your environment variables.`,
-      });
+      console.warn("⚠️ Registration OTP email dispatch failed or timed out:", emailError.message);
+      console.log(`🔑 [DEV/FALLBACK OTP] Registration OTP for ${userEmail}: ${otp}`);
     }
 
     res.status(200).json({
@@ -140,15 +136,11 @@ const sendOtp = async (req, res) => {
 
     console.log(`🔑 [OTP SYSTEM] Generated Standalone OTP for ${userEmail}: ${otp}`);
 
-    // Await OTP email sending to ensure execution completes in cloud environments
     try {
       await sendOtpEmail(userEmail, otp, user?.name || pendingUser.name || "User");
     } catch (emailError) {
-      console.error("❌ Standalone OTP email failed to send:", emailError.message);
-      return res.status(500).json({
-        success: false,
-        message: `Failed to send OTP email: ${emailError.message}. Please verify SMTP configuration.`,
-      });
+      console.warn("⚠️ Standalone OTP email failed to send:", emailError.message);
+      console.log(`🔑 [DEV/FALLBACK OTP] Standalone OTP for ${userEmail}: ${otp}`);
     }
 
     res.status(200).json({
@@ -278,15 +270,11 @@ const resendOtp = async (req, res) => {
 
     console.log(`🔑 [OTP SYSTEM] Resent OTP for ${userEmail}: ${otp}`);
 
-    // Await OTP email sending
     try {
       await sendOtpEmail(userEmail, otp, user?.name || pendingUser.name || "User");
     } catch (emailError) {
-      console.error("❌ Resend OTP email failed to send:", emailError.message);
-      return res.status(500).json({
-        success: false,
-        message: `Failed to resend OTP email: ${emailError.message}. Please try again later.`,
-      });
+      console.warn("⚠️ Resend OTP email failed to send:", emailError.message);
+      console.log(`🔑 [DEV/FALLBACK OTP] Resent OTP for ${userEmail}: ${otp}`);
     }
 
     res.status(200).json({
@@ -411,11 +399,8 @@ const forgotPassword = async (req, res) => {
     try {
       await sendPasswordResetEmail(userEmail, otp, user.name);
     } catch (emailError) {
-      console.error("❌ Password reset email failed to send:", emailError.message);
-      return res.status(500).json({
-        success: false,
-        message: `Failed to send password reset email: ${emailError.message}. Please verify SMTP settings.`,
-      });
+      console.warn("⚠️ Password reset email failed to send:", emailError.message);
+      console.log(`🔑 [DEV/FALLBACK OTP] Password Reset OTP for ${userEmail}: ${otp}`);
     }
 
     res.status(200).json({
@@ -468,7 +453,7 @@ const resetPassword = async (req, res) => {
       });
     }
 
-    user.password = await bcrypt.hash(newPassword, 10);
+    user.password = newPassword;
     user.otp = null;
     user.otpExpires = null;
     await user.save();
@@ -525,6 +510,74 @@ const logout = (req, res) => {
   });
 };
 
+// ======================================
+// Update User Profile
+// PUT /api/auth/update-profile
+// ======================================
+const updateProfile = async (req, res) => {
+  try {
+    const { name, phone, mobile, address, city, pincode } = req.body || {};
+    const user = await User.findById(req.user._id);
+
+    if (!user) {
+      return res.status(404).json({ success: false, message: "User not found." });
+    }
+
+    if (name) user.name = name;
+    if (phone || mobile) {
+      user.phone = phone || mobile;
+      user.mobile = mobile || phone;
+    }
+    if (address !== undefined) user.address = address;
+    if (city !== undefined) user.city = city;
+    if (pincode !== undefined) user.pincode = pincode;
+
+    await user.save();
+
+    res.status(200).json({
+      success: true,
+      message: "Profile updated successfully.",
+      user,
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message || "Failed to update profile." });
+  }
+};
+
+// ======================================
+// Update User Password
+// PUT /api/auth/update-password
+// ======================================
+const updatePassword = async (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body || {};
+
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ success: false, message: "Current password and new password are required." });
+    }
+
+    const user = await User.findById(req.user._id).select("+password");
+    if (!user) {
+      return res.status(404).json({ success: false, message: "User not found." });
+    }
+
+    const isMatch = await user.comparePassword(currentPassword);
+    if (!isMatch) {
+      return res.status(400).json({ success: false, message: "Incorrect current password." });
+    }
+
+    user.password = newPassword;
+    await user.save();
+
+    res.status(200).json({
+      success: true,
+      message: "Password updated successfully.",
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message || "Failed to update password." });
+  }
+};
+
 module.exports = {
   register,
   sendOtp,
@@ -534,5 +587,7 @@ module.exports = {
   forgotPassword,
   resetPassword,
   getCurrentUser,
+  updateProfile,
+  updatePassword,
   logout,
 };

@@ -79,14 +79,14 @@ const getBaseHtmlWrapper = (title, bodyContent) => {
  * 1. Send Registration / Authentication OTP
  */
 const sendOtpEmail = async (email, otp, name = "Valued Customer") => {
-  const subject = `Your Security Verification Code - ${COMPANY.name}`;
+  const subject = `${otp} is your verification code for ${COMPANY.name}`;
   
-  const text = `Hello ${name},\n\nYour One-Time Password (OTP) for account verification at ${COMPANY.name} is: ${otp}\n\nThis code is valid for 10 minutes.\nIf you did not request this verification code, please ignore this email.\n\nRegards,\n${COMPANY.name} Team`;
+  const text = `Hello ${name},\n\nYour 6-digit verification code for ${COMPANY.name} is: ${otp}\n\nThis verification code is valid for 10 minutes.\nIf you did not request this code, please ignore this email.\n\nRegards,\n${COMPANY.name} Team`;
 
   const bodyContent = `
     <h2 style="color: #0f766e; margin-top: 0;">Account Verification</h2>
     <p>Hello <strong>${name}</strong>,</p>
-    <p>Thank you for connecting with <strong>${COMPANY.name}</strong>. Please use the verification code below to complete your registration or login:</p>
+    <p>Thank you for connecting with <strong>${COMPANY.name}</strong>. Please use the verification code below to complete your account authentication:</p>
     
     <div class="otp-box">
         <div class="otp-code">${otp}</div>

@@ -56,7 +56,8 @@ const allowedOrigins = [
   "http://127.0.0.1:5173",
   "http://127.0.0.1:5174",
   "https://manvienterprises.netlify.app",
-];
+  process.env.CLIENT_URL,
+].filter(Boolean);
 
 
 app.use(

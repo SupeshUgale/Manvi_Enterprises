@@ -11,7 +11,8 @@ const INITIAL_CATEGORIES = [
     count: "8 Products Available",
     desc: "Maintenance-free automotive, inverter, and bike batteries.",
     icon: "BatteryCharging",
-    image: "https://images.unsplash.com/photo-1619642751034-765dfdf7c58e?auto=format&fit=crop&w=400&q=80",
+    img: "https://images.unsplash.com/photo-1619642751034-765dfdf7c58e?auto=format&fit=crop&w=800&q=80",
+    image: "https://images.unsplash.com/photo-1619642751034-765dfdf7c58e?auto=format&fit=crop&w=800&q=80",
   },
   {
     name: "Inverters & UPS",
@@ -19,7 +20,8 @@ const INITIAL_CATEGORIES = [
     count: "5 Products Available",
     desc: "Pure sine wave home, enterprise, and solar power back-up systems.",
     icon: "Zap",
-    image: "https://images.unsplash.com/photo-1508514177221-188b1cf16e9d?auto=format&fit=crop&w=400&q=80",
+    img: "https://images.unsplash.com/photo-1508514177221-188b1cf16e9d?auto=format&fit=crop&w=800&q=80",
+    image: "https://images.unsplash.com/photo-1508514177221-188b1cf16e9d?auto=format&fit=crop&w=800&q=80",
   },
   {
     name: "Engine Oils & Lube",
@@ -27,7 +29,8 @@ const INITIAL_CATEGORIES = [
     count: "4 Products Available",
     desc: "Premium synthetic multi-grade engine lubricants and industrial oils.",
     icon: "Droplet",
-    image: "https://images.unsplash.com/photo-1619642751034-765dfdf7c58e?auto=format&fit=crop&w=400&q=80",
+    img: "https://images.unsplash.com/photo-1486006920555-c77dce18193b?auto=format&fit=crop&w=800&q=80",
+    image: "https://images.unsplash.com/photo-1486006920555-c77dce18193b?auto=format&fit=crop&w=800&q=80",
   },
 ];
 

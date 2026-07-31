@@ -138,16 +138,29 @@ const Home = ({ user }) => {
               </motion.div>
 
               <motion.h1
-                initial={{ opacity: 0, y: 24 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6, delay: 0.1 }}
-                className="text-4xl sm:text-6xl xl:text-7xl font-extrabold text-gray-900 dark:text-white leading-[1.08] tracking-tight"
-              >
-                Industrial Power <br />
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#2F5D50] via-[#3d7767] to-[#D4A64A]">
-                  Engineered For Scale.
-                </span>
-              </motion.h1>
+  initial={{ opacity: 0, y: 24 }}
+  animate={{ opacity: 1, y: 0 }}
+  transition={{ duration: 0.6, delay: 0.1 }}
+  className="relative z-10 text-4xl sm:text-6xl xl:text-7xl font-extrabold leading-[1.08] tracking-tight"
+>
+  <span className="text-gray-900 dark:text-white">
+    Industrial Power
+  </span>
+
+  <br />
+
+  <span
+    style={{
+      display: "inline-block",
+      background: "linear-gradient(90deg, #5FAF98 0%, #8BC7B5 50%, #D4A64A 100%)",
+      WebkitBackgroundClip: "text",
+      WebkitTextFillColor: "transparent",
+      backgroundClip: "text",
+    }}
+  >
+    Engineered For Scale.
+  </span>
+</motion.h1>
 
               <motion.p
                 initial={{ opacity: 0, y: 20 }}

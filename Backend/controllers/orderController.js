@@ -48,13 +48,14 @@ const createOrder = async (req, res) => {
       });
     }
 
-    const recipientEmail = customer.email || (req.user ? req.user.email : null);
-    if (!recipientEmail) {
+    const rawEmail = customer.email || (req.user ? req.user.email : null);
+    if (!rawEmail) {
       return res.status(400).json({
         success: false,
         message: "Customer email address is required to place an order.",
       });
     }
+    const recipientEmail = rawEmail.toLowerCase().trim();
 
     const orderId = generateOrderId();
 
@@ -117,7 +118,7 @@ const createOrder = async (req, res) => {
 // @access  Private
 const getUserOrders = async (req, res) => {
   try {
-    const userEmail = req.user ? req.user.email : null;
+    const userEmail = (req.user ? req.user.email : "").toLowerCase().trim();
 
     if (!userEmail) {
       return res.status(401).json({
@@ -126,7 +127,9 @@ const getUserOrders = async (req, res) => {
       });
     }
 
-    const orders = await Order.find({ "customer.email": userEmail }).sort({
+    const orders = await Order.find({
+      "customer.email": { $regex: new RegExp(`^${userEmail.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, "i") }
+    }).sort({
       createdAt: -1,
     });
 

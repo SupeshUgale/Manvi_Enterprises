@@ -204,9 +204,9 @@ const ProductCard = ({ product, onAddToCart }) => {
           <span className="text-lg font-black text-[#1F2937] dark:text-white stats-font">
             ₹{product.price.toLocaleString("en-IN")}
           </span>
-          {product.originalPrice > product.price && (
+          {(product.actualPrice || product.originalPrice) > product.price && (
             <span className="text-xs text-[#4B5563]/50 dark:text-gray-500 line-through">
-              ₹{product.originalPrice.toLocaleString("en-IN")}
+              ₹{(product.actualPrice || product.originalPrice).toLocaleString("en-IN")}
             </span>
           )}
         </div>

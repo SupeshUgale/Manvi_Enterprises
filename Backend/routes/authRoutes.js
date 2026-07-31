@@ -10,6 +10,8 @@ const {
   forgotPassword,
   resetPassword,
   getCurrentUser,
+  updateProfile,
+  updatePassword,
   logout,
 } = require("../controllers/authController");
 
@@ -36,6 +38,10 @@ router.post("/reset-password", resetPassword);
 
 // Get logged in user profile
 router.get("/me", protect, getCurrentUser);
+
+// Update user profile and password
+router.put("/update-profile", protect, updateProfile);
+router.put("/update-password", protect, updatePassword);
 
 // Logout
 router.post("/logout", logout);

@@ -12,6 +12,16 @@ const ICON_MAP = {
   Layers,
 };
 
+const BACKEND_URL = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5000';
+function resolveImageUrl(img) {
+  if (!img) return 'https://images.unsplash.com/photo-1619642751034-765dfdf7c58e?auto=format&fit=crop&w=800&q=80';
+  if (img.startsWith('http')) return img;
+  if (img.startsWith('/product/')) return img;
+  if (img.startsWith('/uploads/')) return `${BACKEND_URL}${img}`;
+  if (img.startsWith('/')) return img;
+  return `/product/${img}`;
+}
+
 export default function Categories() {
   const { categories, products } = useProduct();
   const { user } = useAuth();
@@ -88,9 +98,12 @@ export default function Categories() {
                 {/* Image Section */}
                 <div className="h-48 overflow-hidden relative bg-[#F2F4F3] border-b border-[#E5E7EB]">
                   <img
-                    src={cat.image}
+                    src={resolveImageUrl(cat.img || cat.image)}
                     alt={cat.name}
                     className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                    onError={(e) => {
+                      e.target.src = "https://images.unsplash.com/photo-1619642751034-765dfdf7c58e?auto=format&fit=crop&w=800&q=80";
+                    }}
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
                   <div className="absolute bottom-4 left-4 right-4 flex justify-between items-center text-white">

@@ -17,9 +17,9 @@ const createTransporter = (host, port, user, pass) => {
     },
     // Force IPv4 - Render & many cloud hosts block IPv6 outbound causing ENETUNREACH
     family: 4,
-    connectionTimeout: 8000,
-    greetingTimeout: 8000,
-    socketTimeout: 12000,
+    connectionTimeout: 3000,
+    greetingTimeout: 3000,
+    socketTimeout: 4000,
   });
 };
 
@@ -83,17 +83,15 @@ const sendEmail = async (options) => {
     to: recipient,
     subject: options.subject || "Notification from Manvi Enterprises",
     replyTo: senderEmail,
+    priority: "high",
+    importance: "high",
+    headers: {
+      "X-Priority": "1",
+      "X-MSMail-Priority": "High",
+      "Importance": "high",
+    },
     text: plainTextBody,
     html: htmlBody,
-    headers: {
-      "X-Mailer": "Manvi Enterprises Express Server",
-      "X-Priority": "3 (Normal)",
-      "X-MSMail-Priority": "Normal",
-      Importance: "Normal",
-      "List-Unsubscribe": `<mailto:${senderEmail}?subject=unsubscribe>`,
-      "Auto-Submitted": "auto-generated",
-      ...options.headers,
-    },
   };
 
   // Dual-port attempt: try primary port (465 SSL), if blocked/times out, try fallback (587 STARTTLS)

@@ -9,14 +9,15 @@ function resolveImageUrl(img) {
   return img;
 }
 import { useAuth } from '../context/AuthContext';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import api from '../api/axios';
 import SecureLoader from '../Components/SecureLoader';
 import {
   LayoutDashboard, Package, ShoppingBag, Users, LogOut,
   TrendingUp, IndianRupee, AlertCircle, CheckCircle2,
   Truck, XCircle, ChevronDown, RefreshCw, Loader2, Eye,
-  Edit3, Trash2, Plus, Search, Filter, ArrowUpRight, X
+  Edit3, Trash2, Plus, Search, Filter, ArrowUpRight, X, EyeOff,
+  Layers, Settings, Key, Shield, UserPlus
 } from 'lucide-react';
 
 const STATUS_COLORS = {
@@ -31,30 +32,37 @@ const TABS = [
   { id: 'overview', label: 'Overview', icon: LayoutDashboard },
   { id: 'orders', label: 'Orders', icon: ShoppingBag },
   { id: 'products', label: 'Products', icon: Package },
-  { id: 'users', label: 'Customers', icon: Users },
+  { id: 'categories', label: 'Categories', icon: Layers },
+  { id: 'users', label: 'User Credentials', icon: Users },
+  { id: 'settings', label: 'Settings', icon: Settings },
 ];
 
 export default function AdminDashboard() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState('overview');
+  const [searchParams] = useSearchParams();
+  const initialTab = searchParams.get('tab') || 'overview';
+  const [activeTab, setActiveTab] = useState(initialTab);
   const [stats, setStats] = useState(null);
   const [orders, setOrders] = useState([]);
   const [products, setProducts] = useState([]);
   const [customers, setCustomers] = useState([]);
+  const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [updatingOrder, setUpdatingOrder] = useState(null);
   const [deletingProduct, setDeletingProduct] = useState(null);
+  const [showPasswordFor, setShowPasswordFor] = useState(null);
 
   const fetchAll = async () => {
     setLoading(true);
     try {
-      const [statsRes, ordersRes, productsRes, usersRes] = await Promise.allSettled([
+      const [statsRes, ordersRes, productsRes, usersRes, catRes] = await Promise.allSettled([
         api.get('/admin/stats'),
         api.get('/orders'),
         api.get('/products'),
         api.get('/admin/users'),
+        api.get('/categories'),
       ]);
       if (statsRes.status === 'fulfilled') {
         setStats(statsRes.value.data?.stats || statsRes.value.data);
@@ -67,6 +75,9 @@ export default function AdminDashboard() {
       }
       if (usersRes.status === 'fulfilled') {
         setCustomers(usersRes.value.data?.users || usersRes.value.data?.data || []);
+      }
+      if (catRes.status === 'fulfilled') {
+        setCategories(catRes.value.data?.categories || catRes.value.data?.data || []);
       }
     } catch (err) {
       console.error('Admin data fetch error:', err);
@@ -382,7 +393,7 @@ export default function AdminDashboard() {
           <table className="w-full text-xs">
             <thead className="bg-gray-50 border-b border-gray-100">
               <tr>
-                {['Name', 'Email', 'Phone', 'Role', 'Joined'].map(h => (
+                {['Name', 'Email', 'Password Hash', 'Phone', 'Role', 'Verified', 'Joined'].map(h => (
                   <th key={h} className="px-4 py-3 text-left text-[10px] font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">{h}</th>
                 ))}
               </tr>
@@ -398,11 +409,44 @@ export default function AdminDashboard() {
                       <span className="font-semibold text-gray-900">{customer.name || '—'}</span>
                     </div>
                   </td>
-                  <td className="px-4 py-3 text-gray-600">{customer.email}</td>
+                  {/* Email */}
+                  <td className="px-4 py-3">
+                    <span className="text-blue-700 font-mono text-[10px] bg-blue-50 border border-blue-100 px-2 py-0.5 rounded-lg select-all">
+                      {customer.email}
+                    </span>
+                  </td>
+                  {/* Password Hash with reveal toggle */}
+                  <td className="px-4 py-3">
+                    {customer.password ? (
+                      <div className="flex items-center gap-1.5 max-w-[220px]">
+                        <span className="font-mono text-[9px] text-gray-500 bg-gray-100 border border-gray-200 px-2 py-1 rounded-lg truncate flex-1 select-all" title={customer.password}>
+                          {showPasswordFor === customer._id
+                            ? customer.password
+                            : '••••••••••••••••••••••••'}
+                        </span>
+                        <button
+                          onClick={() => setShowPasswordFor(prev => prev === customer._id ? null : customer._id)}
+                          className="shrink-0 p-1 rounded-lg hover:bg-gray-200 text-gray-500 transition cursor-pointer"
+                          title={showPasswordFor === customer._id ? 'Hide hash' : 'Show hash'}
+                        >
+                          {showPasswordFor === customer._id
+                            ? <EyeOff className="w-3 h-3" />
+                            : <Eye className="w-3 h-3" />}
+                        </button>
+                      </div>
+                    ) : (
+                      <span className="text-gray-400 text-[10px]">Not available</span>
+                    )}
+                  </td>
                   <td className="px-4 py-3 text-gray-600">{customer.phone || customer.mobile || '—'}</td>
                   <td className="px-4 py-3">
                     <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${customer.role === 'admin' ? 'bg-violet-100 text-violet-700 border-violet-200' : 'bg-gray-100 text-gray-600 border-gray-200'}`}>
                       {customer.role || 'user'}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3">
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${customer.isVerified ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-amber-50 text-amber-600 border-amber-200'}`}>
+                      {customer.isVerified ? 'Verified' : 'Pending'}
                     </span>
                   </td>
                   <td className="px-4 py-3 text-gray-500">
@@ -416,6 +460,93 @@ export default function AdminDashboard() {
             <div className="py-12 text-center text-gray-400 text-xs">No customers match your search</div>
           )}
         </div>
+      </div>
+    </div>
+  );
+
+  // ─── Categories Tab ────────────────────────────────────────────────────────
+  const renderCategories = () => (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-lg font-bold text-gray-900">Product Categories</h2>
+          <p className="text-xs text-gray-500 mt-0.5">{categories.length} categories active</p>
+        </div>
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        {categories.map((cat) => (
+          <div key={cat._id || cat.slug} className="bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-xs hover:shadow-md transition">
+            <div className="h-36 overflow-hidden relative bg-gray-100">
+              <img
+                src={cat.img || cat.image || "https://images.unsplash.com/photo-1619642751034-765dfdf7c58e?auto=format&fit=crop&w=800&q=80"}
+                alt={cat.name}
+                className="w-full h-full object-cover"
+              />
+              <div className="absolute top-3 right-3 bg-emerald-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
+                Active
+              </div>
+            </div>
+            <div className="p-4 space-y-2">
+              <div className="flex items-center justify-between">
+                <h3 className="font-bold text-sm text-gray-900">{cat.name}</h3>
+                <span className="text-[10px] font-mono text-gray-400 bg-gray-100 px-2 py-0.5 rounded">{cat.slug}</span>
+              </div>
+              <p className="text-xs text-gray-500 line-clamp-2">{cat.description || "No description provided."}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+
+  // ─── Settings Tab ───────────────────────────────────────────────────────────
+  const renderSettings = () => (
+    <div className="max-w-4xl space-y-6">
+      <div>
+        <h2 className="text-lg font-bold text-gray-900">Admin Settings & User Credentials</h2>
+        <p className="text-xs text-gray-500 mt-0.5">Manage administrative credentials, security settings, and user accounts</p>
+      </div>
+
+      {/* Security Info Card */}
+      <div className="bg-white border border-gray-200 rounded-2xl p-5 space-y-4">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 bg-emerald-100 rounded-xl flex items-center justify-center text-emerald-700 font-bold">
+            <Shield className="w-5 h-5" />
+          </div>
+          <div>
+            <h3 className="text-sm font-bold text-gray-900">Active Admin Account</h3>
+            <p className="text-xs text-gray-500">Super Administrator Profile</p>
+          </div>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 text-xs">
+          <div className="bg-gray-50 p-3 rounded-xl border border-gray-100">
+            <span className="text-[10px] uppercase font-bold text-gray-400 block">Admin Email</span>
+            <span className="font-mono text-emerald-700 font-bold select-all">{user?.email || 'manvienterprises.official@gmail.com'}</span>
+          </div>
+          <div className="bg-gray-50 p-3 rounded-xl border border-gray-100">
+            <span className="text-[10px] uppercase font-bold text-gray-400 block">Role & Permissions</span>
+            <span className="font-bold text-violet-700">Full System Access (Super Admin)</span>
+          </div>
+        </div>
+      </div>
+
+      {/* User Credentials Shortcut Card */}
+      <div className="bg-gradient-to-r from-emerald-900 to-teal-900 text-white rounded-2xl p-6 flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div className="space-y-1 text-center sm:text-left">
+          <div className="flex items-center gap-2 justify-center sm:justify-start text-emerald-300 font-bold text-xs">
+            <Key className="w-4 h-4" /> User Credential Manager
+          </div>
+          <h3 className="text-base font-bold">View Registered Users & Passwords</h3>
+          <p className="text-xs text-emerald-200/80 max-w-md">
+            Click to view all registered users with their registered emails and bcrypt encrypted password credentials.
+          </p>
+        </div>
+        <button
+          onClick={() => setActiveTab('users')}
+          className="bg-emerald-400 hover:bg-emerald-300 text-emerald-950 font-bold text-xs px-5 py-2.5 rounded-xl transition shrink-0 cursor-pointer shadow-md"
+        >
+          View User Passwords & Emails →
+        </button>
       </div>
     </div>
   );
@@ -496,7 +627,9 @@ export default function AdminDashboard() {
         {activeTab === 'overview' && renderOverview()}
         {activeTab === 'orders' && renderOrders()}
         {activeTab === 'products' && renderProducts()}
+        {activeTab === 'categories' && renderCategories()}
         {activeTab === 'users' && renderUsers()}
+        {activeTab === 'settings' && renderSettings()}
       </div>
     </div>
   );

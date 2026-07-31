@@ -111,7 +111,7 @@ const updateUserProfile = async (req, res) => {
     user.address = req.body.address || user.address;
 
     if (req.body.password) {
-      user.password = await bcrypt.hash(req.body.password, 10);
+      user.password = req.body.password;
     }
 
     const updatedUser = await user.save();
