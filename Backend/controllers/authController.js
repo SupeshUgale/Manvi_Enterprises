@@ -90,9 +90,8 @@ const register = async (req, res) => {
 
     res.status(200).json({
       success: true,
-      message: "Verification OTP sent to your email.",
+      message: "Verification OTP sent to your email. Please check your inbox (and spam folder).",
       email: userEmail,
-      otp,
     });
   } catch (error) {
     console.error("REGISTER ERROR:", error);
@@ -145,9 +144,8 @@ const sendOtp = async (req, res) => {
 
     res.status(200).json({
       success: true,
-      message: "OTP sent successfully to your email.",
+      message: "OTP sent successfully to your email. Please check your inbox.",
       email: userEmail,
-      otp,
     });
   } catch (error) {
     console.error("SEND OTP ERROR:", error);
@@ -279,8 +277,7 @@ const resendOtp = async (req, res) => {
 
     res.status(200).json({
       success: true,
-      message: "New OTP sent successfully to your email.",
-      otp,
+      message: "New OTP sent to your email. Please check your inbox (and spam folder).",
     });
   } catch (error) {
     console.error("RESEND OTP ERROR:", error);
